@@ -3203,10 +3203,8 @@ static void struct_decl(CType *type, AttributeDef *ad, int u)
 
     a = tok; /* save decl type */
     next();
-    if (tok == TOK_ATTRIBUTE1 || tok == TOK_ATTRIBUTE2) {
+    if (tok == TOK_ATTRIBUTE1 || tok == TOK_ATTRIBUTE2)
         parse_attribute(ad);
-        next();
-    }
     if (tok != '{') {
         v = tok;
         next();
@@ -3321,7 +3319,7 @@ do_decl:
                     if (ad1.a.aligned) {
                         if (align < ad1.a.aligned)
                             align = ad1.a.aligned;
-                    } else if (ad1.a.packed) {
+                    } else if (ad1.a.packed || ad->a.packed) {
                         align = 1;
                     } else if (*tcc_state->pack_stack_ptr) {
                         if (align > *tcc_state->pack_stack_ptr)
