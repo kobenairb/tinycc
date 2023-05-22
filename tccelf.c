@@ -1881,6 +1881,7 @@ static int layout_sections(TCCState *s1,
                            ElfW(Phdr) * phdr,
                            int phnum,
                            Section *interp,
+                           Section *strsec,
                            struct dyn_inf *dyninf,
                            int *sec_order)
 {
@@ -2459,7 +2460,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
     phdr = tcc_mallocz(phnum * sizeof(ElfW(Phdr)));
 
     /* compute section to program header mapping */
-    file_offset = layout_sections(s1, phdr, phnum, interp, &dyninf, sec_order);
+    file_offset = layout_sections(s1, phdr, phnum, interp, strsec, &dyninf, sec_order);
 
     /* Fill remaining program header and finalize relocation related to dynamic
        linking. */
