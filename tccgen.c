@@ -2702,7 +2702,7 @@ static void type_to_str(char *buf, int buf_size, CType *type, const char *varstr
     char buf1[256];
     const char *tstr;
 
-    t = type->t & VT_TYPE;
+    t = type->t;
     bt = t & VT_BTYPE;
     buf[0] = '\0';
     if (t & VT_CONSTANT)
@@ -2713,6 +2713,16 @@ static void type_to_str(char *buf, int buf_size, CType *type, const char *varstr
         pstrcat(buf, buf_size, "unsigned ");
     else if (t & VT_DEFSIGN)
         pstrcat(buf, buf_size, "signed ");
+    if (t & VT_EXTERN)
+        pstrcat(buf, buf_size, "extern ");
+    if (t & VT_STATIC)
+        pstrcat(buf, buf_size, "static ");
+    if (t & VT_TYPEDEF)
+        pstrcat(buf, buf_size, "typedef ");
+    if (t & VT_INLINE)
+        pstrcat(buf, buf_size, "inline ");
+    buf_size -= strlen(buf);
+    buf += strlen(buf);
     switch (bt) {
     case VT_VOID:
         tstr = "void";
