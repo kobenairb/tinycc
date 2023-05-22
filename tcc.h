@@ -105,6 +105,14 @@
 #define TCC_TARGET_I386
 #endif
 
+#if defined(TCC_TARGET_ARM) && !defined(TCC_ARM_VERSION)
+#ifdef TCC_ARM_HARDFLOAT
+#define TCC_ARM_VERSION 7
+#else
+#define TCC_ARM_VERSION 4
+#endif
+#endif
+
 #if !defined(TCC_UCLIBC) && !defined(TCC_TARGET_ARM) && !defined(TCC_TARGET_C67) \
     && !defined(TCC_TARGET_X86_64)
 #define CONFIG_TCC_BCHECK /* enable bound checking code */
@@ -1145,7 +1153,8 @@ ST_DATA Sym *local_label_stack;
 ST_DATA Sym *global_label_stack;
 ST_DATA Sym *define_stack;
 ST_DATA CType char_pointer_type, func_old_type, int_type, size_type;
-ST_DATA SValue vstack[VSTACK_SIZE], *vtop;
+ST_DATA SValue __vstack[1 + /*to make bcheck happy*/ VSTACK_SIZE], *vtop;
+#define vstack (__vstack + 1)
 ST_DATA int rsym, anon_sym, ind, loc;
 
 ST_DATA int const_wanted;  /* true if constant wanted */
