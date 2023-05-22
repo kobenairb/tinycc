@@ -1307,6 +1307,7 @@ ST_FUNC void parse_define(void)
     if (tok == '(') {
         /* must be able to parse TOK_DOTS (in asm mode '.' can be part of identifier) */
         parse_flags &= ~PARSE_FLAG_ASM_FILE;
+        isidnum_table['.' - CH_EOF] = 0;
         next_nomacro();
         ps = &first;
         if (tok != ')')
@@ -1336,6 +1337,7 @@ ST_FUNC void parse_define(void)
         next_nomacro_spc();
         t = MACRO_FUNC;
         parse_flags |= (saved_parse_flags & PARSE_FLAG_ASM_FILE);
+        isidnum_table['.' - CH_EOF] = (parse_flags & PARSE_FLAG_ASM_FILE) ? IS_ID : 0;
     }
     tok_str_new(&str);
     spc = 2;
@@ -2487,7 +2489,6 @@ redo_no_start:
         p1 = p;
         h = TOK_HASH_INIT;
         h = TOK_HASH_FUNC(h, c);
-        isidnum_table['.' - CH_EOF] = (parse_flags & PARSE_FLAG_ASM_FILE) ? IS_ID : 0;
         while (c = *++p, isidnum_table[c - CH_EOF] & (IS_ID | IS_NUM))
             h = TOK_HASH_FUNC(h, c);
         if (c != '\\') {
@@ -2541,7 +2542,6 @@ redo_no_start:
             } else {
                 cstr_reset(&tokcstr);
                 cstr_ccat(&tokcstr, 'L');
-                isidnum_table['.' - CH_EOF] = (parse_flags & PARSE_FLAG_ASM_FILE) ? IS_ID : 0;
                 goto parse_ident_slow;
             }
         }
@@ -3362,6 +3362,8 @@ ST_FUNC void preprocess_init(TCCState *s1)
     s1->pack_stack_ptr = s1->pack_stack;
 
     isidnum_table['$' - CH_EOF] = tcc_state->dollars_in_identifiers ? IS_ID : 0;
+
+    isidnum_table['.' - CH_EOF] = (parse_flags & PARSE_FLAG_ASM_FILE) ? IS_ID : 0;
 }
 
 ST_FUNC void preprocess_new(void)
