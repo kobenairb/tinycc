@@ -554,12 +554,12 @@ void *dlopen(const char *filename, int flag)
 }
 
 void dlclose(void *p) {}
-
+/*
 const char *dlerror(void)
 {
     return "error";
 }
-
+*/
 typedef struct TCCSyms
 {
     char *str;
