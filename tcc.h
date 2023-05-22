@@ -1552,7 +1552,8 @@ static inline uint16_t read16le(unsigned char *p)
 }
 static inline void write16le(unsigned char *p, uint16_t x)
 {
-    p[0] = x & 255, p[1] = x >> 8 & 255;
+    p[0] = x & 255;
+    p[1] = x >> 8 & 255;
 }
 static inline uint32_t read32le(unsigned char *p)
 {
@@ -1560,7 +1561,8 @@ static inline uint32_t read32le(unsigned char *p)
 }
 static inline void write32le(unsigned char *p, uint32_t x)
 {
-    write16le(p, x), write16le(p + 2, x >> 16);
+    write16le(p, x);
+    write16le(p + 2, x >> 16);
 }
 static inline void add32le(unsigned char *p, int32_t x)
 {
@@ -1572,7 +1574,8 @@ static inline uint64_t read64le(unsigned char *p)
 }
 static inline void write64le(unsigned char *p, uint64_t x)
 {
-    write32le(p, x), write32le(p + 4, x >> 32);
+    write32le(p, x);
+    write32le(p + 4, x >> 32);
 }
 static inline void add64le(unsigned char *p, int64_t x)
 {
