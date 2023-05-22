@@ -72,6 +72,8 @@ mov %rcx, %cr3
 movq %cr3, %rax
 movq %db3, %rbx
 movq %dr6, %rax
+mov %cr8, %rsi
+mov %rdi, %cr8
 #endif
 movl %fs, %ecx
 movl %ebx, %fs
@@ -123,6 +125,8 @@ notl %r15d
   push %gs
   push $1
   push $100
+  push 0x42(%eax)
+  pop 0x43(%esi)
                                                 
 #ifdef __i386__
   popl %eax
@@ -738,8 +742,11 @@ int $0x10
     lmsw 0x1000
     lsl 0x1000, %ecx
     ltr 0x1000
+    ltr %si
     smsw 0x1000
     str 0x1000
+    str %ecx
+    str %dx
     
     verr 0x1000
     verw 0x1000
