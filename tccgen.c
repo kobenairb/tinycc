@@ -2836,6 +2836,7 @@ do_decl:
                 if (tok == '}')
                     break;
             }
+            s->c = type_size(&int_type, &align);
             skip('}');
         } else {
             maxalign = 1;
