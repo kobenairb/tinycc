@@ -441,7 +441,8 @@ typedef struct SValue
 struct SymAttr
 {
     unsigned short aligned : 5, /* alignment as log2+1 (0 == unspecified) */
-        packed : 1, weak : 1, visibility : 2, dllexport : 1, dllimport : 1, unused : 5;
+        packed : 1, weak : 1, visibility : 2, dllexport : 1, dllimport : 1, asmcsym : 1,
+        asmexport : 1, unused : 3;
 };
 
 /* function attributes or temporary attributes for parsing */
