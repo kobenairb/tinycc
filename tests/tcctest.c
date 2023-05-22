@@ -945,6 +945,12 @@ void expr_ptr_test()
         j = -1;
         printf("%d\n", sp[j].i);
     }
+#ifdef __LP64__
+    i = 1;
+    p = (int *) 0x100000000UL + i;
+    i = ((long) p) >> 32;
+    printf("largeptr: %p %d\n", p, i);
+#endif
 }
 
 void expr_cmp_test()
@@ -3110,6 +3116,11 @@ void fancy_copy(unsigned *in, unsigned *out)
     asm volatile("" : "=r"(*out) : "0"(*in));
 }
 
+void fancy_copy2(unsigned *in, unsigned *out)
+{
+    asm volatile("mov %0,(%1)" : : "r"(*in), "r"(out) : "memory");
+}
+
 void asm_test(void)
 {
     char buf[128];
@@ -3183,6 +3194,9 @@ label2:
     val = 43;
     fancy_copy(&val, &val2);
     printf("fancycpy(%d)=%d\n", val, val2);
+    val = 44;
+    fancy_copy2(&val, &val2);
+    printf("fancycpy2(%d)=%d\n", val, val2);
     return;
 label1:
     goto label2;
