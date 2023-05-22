@@ -1313,6 +1313,17 @@ static int tcc_set_flag(TCCState *s, const char *flag_name, int value)
     return set_flag(s, flag_defs, countof(flag_defs), flag_name, value);
 }
 
+static const FlagDef m_defs[] = {
+#ifdef TCC_TARGET_X86_64
+    {offsetof(TCCState, nosse), FD_INVERT, "sse"},
+#endif
+    {0, 0, " no flag"},
+};
+static int tcc_set_m_flag(TCCState *s, const char *flag_name, int value)
+{
+    return set_flag(s, m_defs, countof(m_defs), flag_name, value);
+}
+
 static int strstart(const char *val, const char **str)
 {
     const char *p, *q;
@@ -1785,9 +1796,10 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
             s->soname = tcc_strdup(optarg);
             break;
         case TCC_OPTION_m:
-            if (strcmp(optarg, "32") && strcmp(optarg, "64"))
+            if (!strcmp(optarg, "32") || !strcmp(optarg, "64"))
+                s->option_m = tcc_strdup(optarg);
+            else if (tcc_set_m_flag(s, optarg, 1) < 0)
                 goto unsupported_option;
-            s->option_m = tcc_strdup(optarg);
             break;
         case TCC_OPTION_o:
             if (s->outfile) {
