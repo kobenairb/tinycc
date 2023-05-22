@@ -94,6 +94,7 @@ ST_FUNC int tcc_tool_ar(TCCState *s1, int argc, char **argv)
     const char *ops_conflict = "habdioptxN"; // unsupported but destructive if ignored.
     int verbose = 0;
 
+    (void) s1; /* not used */
     i_lib = 0;
     i_obj = 0; // will hold the index of the lib and first obj
     for (i = 1; i < argc; i++) {
@@ -298,6 +299,7 @@ ST_FUNC int tcc_tool_impdef(TCCState *s1, int argc, char **argv)
     p = NULL;
     v = 0;
 
+    (void) s1; /* not used */
     for (i = 1; i < argc; ++i) {
         const char *a = argv[i];
         if ('-' == a[0]) {
@@ -411,6 +413,8 @@ the_end:
 
 ST_FUNC void tcc_tool_cross(TCCState *s, char **argv, int option)
 {
+    (void) s;
+    (void) argv; /* not used */
     tcc_error("-m%d not implemented.", option);
 }
 
@@ -465,6 +469,7 @@ ST_FUNC void tcc_tool_cross(TCCState *s, char **argv, int target)
     char *a0 = argv[0];
     int prefix = tcc_basename(a0) - a0;
 
+    (void) s; /* not used */
     snprintf(program,
              sizeof program,
              "%.*s%s"

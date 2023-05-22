@@ -710,6 +710,7 @@ LIBTCCAPI void tcc_undefine_symbol(TCCState *s1, const char *sym)
 {
     TokenSym *ts;
     Sym *s;
+    (void) s1; /* not used */
     ts = tok_alloc(sym, strlen(sym));
     s = define_find(ts->tok);
     /* undefine symbol by putting an invalid name */
@@ -1201,6 +1202,7 @@ LIBTCCAPI int tcc_add_symbol(TCCState *s, const char *name, const void *val)
        So it is handled here as if it were in a DLL. */
     pe_putimport(s, 0, name, (uintptr_t) val);
 #else
+    (void) s; /* not used */
     set_elf_sym(symtab_section,
                 (uintptr_t) val,
                 0,
@@ -1994,6 +1996,7 @@ LIBTCCAPI void tcc_set_options(TCCState *s, const char *r)
 
 PUB_FUNC void tcc_print_stats(TCCState *s, unsigned total_time)
 {
+    (void) s; /* not used */
     if (total_time < 1)
         total_time = 1;
     if (total_bytes < 1)
