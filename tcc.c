@@ -370,7 +370,5 @@ int main(int argc, char **argv)
     }
 
     tcc_delete(s);
-    if (bench)
-        tcc_memstats();
     return ret;
 }
