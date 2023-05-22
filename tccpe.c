@@ -764,38 +764,20 @@ static int pe_write(struct pe_info *pe)
 /*----------------------------------------------------------------------------*/
 
 #if defined(TCC_TARGET_X86_64)
-#define ELFW_R_(type) ELF64_R_##type
-#define ElfW_Rel ElfW(Rela)
-
 #define REL_TYPE_DIRECT R_X86_64_64
 #define R_XXX_THUNKFIX R_X86_64_PC32
 #define R_XXX_RELATIVE R_X86_64_RELATIVE
 
-#define ELFW_ST_BIND ELF64_ST_BIND
-#define ELFW_ST_TYPE ELF64_ST_TYPE
-#define ELFW_ST_INFO ELF64_ST_INFO
 #elif defined(TCC_TARGET_I386)
-#define ELFW_R_(type) ELF32_R_##type
-#define ElfW_Rel ElfW(Rel)
-
 #define REL_TYPE_DIRECT R_386_32
 #define R_XXX_THUNKFIX R_386_32
 #define R_XXX_RELATIVE R_386_RELATIVE
 
-#define ELFW_ST_BIND ELF32_ST_BIND
-#define ELFW_ST_TYPE ELF32_ST_TYPE
-#define ELFW_ST_INFO ELF32_ST_INFO
 #elif defined(TCC_TARGET_ARM)
-#define ELFW_R_(type) ELF32_R_##type
-#define ElfW_Rel ElfW(Rel)
-
 #define REL_TYPE_DIRECT R_ARM_ABS32
 #define R_XXX_THUNKFIX R_ARM_ABS32
 #define R_XXX_RELATIVE R_ARM_RELATIVE
 
-#define ELFW_ST_BIND ELF32_ST_BIND
-#define ELFW_ST_TYPE ELF32_ST_TYPE
-#define ELFW_ST_INFO ELF32_ST_INFO
 #endif
 /*----------------------------------------------------------------------------*/
 
@@ -1037,7 +1019,7 @@ static void pe_build_reloc(struct pe_info *pe)
 
     for (;;) {
         if (rel < rel_end) {
-            int type = ELFW_R_(TYPE)(rel->r_info);
+            int type = ELFW(R_TYPE)(rel->r_info);
             addr = rel->r_offset + s->sh_addr;
             ++rel;
             if (type != REL_TYPE_DIRECT)
@@ -1217,8 +1199,8 @@ static void pe_relocate_rva(struct pe_info *pe, Section *s)
     ElfW_Rel *rel, *rel_end;
     rel_end = (ElfW_Rel *) (sr->data + sr->data_offset);
     for (rel = (ElfW_Rel *) sr->data; rel < rel_end; rel++) {
-        if (ELFW_R_(TYPE)(rel->r_info) == R_XXX_RELATIVE) {
-            int sym_index = ELFW_R_(SYM)(rel->r_info);
+        if (ELFW(R_TYPE)(rel->r_info) == R_XXX_RELATIVE) {
+            int sym_index = ELFW(R_SYM)(rel->r_info);
             DWORD addr = s->sh_addr;
             if (sym_index) {
                 ElfW(Sym) *sym = (ElfW(Sym) *) symtab_section->data + sym_index;
@@ -1260,7 +1242,7 @@ static int pe_check_symbols(struct pe_info *pe)
         sym = (ElfW(Sym) *) symtab_section->data + sym_index;
         if (sym->st_shndx == SHN_UNDEF) {
             const char *name = symtab_section->link->data + sym->st_name;
-            unsigned type = ELFW_ST_TYPE(sym->st_info);
+            unsigned type = ELFW(ST_TYPE)(sym->st_info);
             int imp_sym = pe_find_import(pe->s1, sym);
             struct import_symbol *is;
 
@@ -1305,7 +1287,7 @@ static int pe_check_symbols(struct pe_info *pe)
                     is->iat_index = put_elf_sym(symtab_section,
                                                 0,
                                                 sizeof(DWORD),
-                                                ELFW_ST_INFO(STB_GLOBAL, STT_OBJECT),
+                                                ELFW(ST_INFO)(STB_GLOBAL, STT_OBJECT),
                                                 0,
                                                 SHN_UNDEF,
                                                 buffer);
@@ -1347,7 +1329,7 @@ static int pe_check_symbols(struct pe_info *pe)
             error_noabort("undefined symbol '%s'", name);
             ret = -1;
 
-        } else if (pe->s1->rdynamic && ELFW_ST_BIND(sym->st_info) != STB_LOCAL) {
+        } else if (pe->s1->rdynamic && ELFW(ST_BIND)(sym->st_info) != STB_LOCAL) {
             /* if -rdynamic option, then export all non local symbols */
             sym->st_other |= 1;
         }
@@ -1432,21 +1414,21 @@ static void pe_print_section(FILE *f, Section *s)
                     (unsigned) sym->st_name,
                     (unsigned) sym->st_value,
                     (unsigned) sym->st_size,
-                    (unsigned) ELFW_ST_BIND(sym->st_info),
-                    (unsigned) ELFW_ST_TYPE(sym->st_info),
+                    (unsigned) ELFW(ST_BIND)(sym->st_info),
+                    (unsigned) ELFW(ST_TYPE)(sym->st_info),
                     (unsigned) sym->st_other,
                     (unsigned) sym->st_shndx,
                     name);
 
         } else if (s->sh_type == SHT_RELX) {
             ElfW_Rel *rel = (ElfW_Rel *) (p + i);
-            ElfW(Sym) *sym = (ElfW(Sym) *) s->link->data + ELFW_R_(SYM)(rel->r_info);
+            ElfW(Sym) *sym = (ElfW(Sym) *) s->link->data + ELFW(R_SYM)(rel->r_info);
             const char *name = s->link->link->data + sym->st_name;
             fprintf(f,
                     "  %04X   %02X   %04X  \"%s\"",
                     (unsigned) rel->r_offset,
-                    (unsigned) ELFW_R_(TYPE)(rel->r_info),
-                    (unsigned) ELFW_R_(SYM)(rel->r_info),
+                    (unsigned) ELFW(R_TYPE)(rel->r_info),
+                    (unsigned) ELFW(R_SYM)(rel->r_info),
                     name);
         } else {
             fprintf(f, "   ");
@@ -1528,7 +1510,7 @@ ST_FUNC int pe_putimport(TCCState *s1, int dllindex, const char *name, const voi
     return add_elf_sym(s1->dynsymtab_section,
                        (uplong) value,
                        dllindex, /* st_size */
-                       ELFW_ST_INFO(STB_GLOBAL, STT_NOTYPE),
+                       ELFW(ST_INFO)(STB_GLOBAL, STT_NOTYPE),
                        0,
                        value ? SHN_ABS : SHN_UNDEF,
                        name);
@@ -1813,7 +1795,7 @@ static void pe_add_runtime_ex(TCCState *s1, struct pe_info *pe)
         add_elf_sym(symtab_section,
                     0,
                     0,
-                    ELFW_ST_INFO(STB_GLOBAL, STT_NOTYPE),
+                    ELFW(ST_INFO)(STB_GLOBAL, STT_NOTYPE),
                     0,
                     SHN_UNDEF,
                     start_symbol);
@@ -1840,7 +1822,7 @@ static void pe_add_runtime_ex(TCCState *s1, struct pe_info *pe)
             add_elf_sym(symtab_section,
                         addr,
                         0,
-                        ELFW_ST_INFO(STB_GLOBAL, STT_NOTYPE),
+                        ELFW(ST_INFO)(STB_GLOBAL, STT_NOTYPE),
                         0,
                         text_section->sh_num,
                         "main");
