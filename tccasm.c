@@ -1043,6 +1043,7 @@ static void parse_asm_operands(ASMOperand *operands, int *nb_operands_ptr, int i
     if (tok != ':') {
         nb_operands = *nb_operands_ptr;
         for (;;) {
+            CString astr;
             if (nb_operands >= MAX_ASM_OPERANDS)
                 tcc_error("too many asm operands");
             op = &operands[nb_operands++];
@@ -1055,11 +1056,10 @@ static void parse_asm_operands(ASMOperand *operands, int *nb_operands_ptr, int i
                 next();
                 skip(']');
             }
-            if (tok != TOK_STR)
-                expect("string constant");
-            op->constraint = tcc_malloc(tokc.str.size);
-            strcpy(op->constraint, tokc.str.data);
-            next();
+            parse_mult_str(&astr, "string constant");
+            op->constraint = tcc_malloc(astr.size);
+            strcpy(op->constraint, astr.data);
+            cstr_free(&astr);
             skip('(');
             gexpr();
             if (is_output) {
