@@ -391,7 +391,8 @@ typedef struct AttributeDef
 {
     unsigned func_call : 3, /* calling convention (0..5), see below */
         aligned : 5,        /* alignement (0..16) */
-        packed : 1, func_export : 1, func_import : 1, func_args : 5, mode : 4, weak : 1, fill : 11;
+        packed : 1, func_export : 1, func_import : 1, func_args : 5, func_proto : 1, mode : 4,
+        weak : 1, fill : 10;
     struct Section *section;
     int alias_target; /* token */
 } AttributeDef;
@@ -401,6 +402,7 @@ typedef struct AttributeDef
 #define FUNC_EXPORT(r) (((AttributeDef *) &(r))->func_export)
 #define FUNC_IMPORT(r) (((AttributeDef *) &(r))->func_import)
 #define FUNC_ARGS(r) (((AttributeDef *) &(r))->func_args)
+#define FUNC_PROTO(r) (((AttributeDef *) &(r))->func_proto)
 #define FUNC_ALIGN(r) (((AttributeDef *) &(r))->aligned)
 #define FUNC_PACKED(r) (((AttributeDef *) &(r))->packed)
 #define ATTR_MODE(r) (((AttributeDef *) &(r))->mode)
