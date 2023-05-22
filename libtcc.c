@@ -1809,14 +1809,13 @@ static int link_option(const char *str, const char *val, const char **ptr)
 
     /* '=' near eos means ',' or '=' is ok */
     if (*q == '=') {
+        if (*p == 0)
+            *ptr = p;
         if (*p != ',' && *p != '=')
             return 0;
         p++;
-        q++;
     }
-
-    if (ptr)
-        *ptr = p;
+    *ptr = p;
     return 1;
 }
 
@@ -1838,8 +1837,8 @@ static char *copy_linker_arg(const char *p)
 /* set linker options */
 static int tcc_set_linker(TCCState *s, const char *option)
 {
-    while (option && *option) {
-        const char *p = option;
+    while (*option) {
+        const char *p = NULL;
         char *end = NULL;
         int ignoring = 0;
 
@@ -1914,21 +1913,19 @@ static int tcc_set_linker(TCCState *s, const char *option)
             } else
                 goto err;
 #endif
-        } else
-            goto err;
+        } else if (p) {
+            return 0;
+        } else {
+        err:
+            tcc_error("unsupported linker option '%s'", option);
+        }
 
         if (ignoring && s->warn_unsupported)
-        err : {
-            char buf[100], *e;
-            pstrcpy(buf, sizeof buf, e = copy_linker_arg(option)), tcc_free(e);
-            if (ignoring)
-                tcc_warning("unsupported linker option '%s'", buf);
-            else
-                tcc_error("unsupported linker option '%s'", buf);
-        }
-            option = skip_linker_arg(&p);
+            tcc_warning("unsupported linker option '%s'", option);
+
+        option = skip_linker_arg(&p);
     }
-    return 0;
+    return 1;
 }
 
 typedef struct TCCOption
@@ -2089,9 +2086,10 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
     int optind = 0;
     int run = 0;
     int x;
+    CString linker_arg; /* collect -Wl options */
     char buf[1024];
 
-    ++s->args_ref;
+    cstr_new(&linker_arg);
 
     while (optind < argc) {
         r = argv[optind++];
@@ -2123,6 +2121,7 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
             if (popt->flags & TCC_OPTION_HAS_ARG) {
                 if (*r1 == '\0' && !(popt->flags & TCC_OPTION_NOSEP)) {
                     if (optind >= argc)
+                    arg_err:
                         tcc_error("argument to '%s' is missing", r);
                     optarg = argv[optind++];
                 }
@@ -2156,7 +2155,7 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
             break;
         case TCC_OPTION_pthread:
             parse_option_D(s, "_REENTRANT");
-            s->args_pthread = 1;
+            s->option_pthread = 1;
             break;
         case TCC_OPTION_bench:
             s->do_bench = 1;
@@ -2274,9 +2273,11 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
             s->rdynamic = 1;
             break;
         case TCC_OPTION_Wl:
-            if (s->linker_arg.size)
-                --s->linker_arg.size, cstr_ccat(&s->linker_arg, ',');
-            cstr_cat(&s->linker_arg, optarg, 0);
+            if (linker_arg.size)
+                --linker_arg.size, cstr_ccat(&linker_arg, ',');
+            cstr_cat(&linker_arg, optarg, 0);
+            if (tcc_set_linker(s, linker_arg.data))
+                cstr_free(&linker_arg);
             break;
         case TCC_OPTION_E:
             x = TCC_OUTPUT_PREPROCESS;
@@ -2324,19 +2325,10 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
         }
     }
 
-    if (1 == s->args_ref) {
-        /* top instance */
-        if (s->output_type != TCC_OUTPUT_OBJ) {
-            tcc_set_linker(s, (const char *) s->linker_arg.data);
-            if (s->args_pthread) {
-                args_parser_add_file(s, optarg, 'l');
-                s->nb_libraries++;
-            }
-        }
-        cstr_free(&s->linker_arg);
-        s->args_pthread = 0;
+    if (linker_arg.size) {
+        r = linker_arg.data;
+        goto arg_err;
     }
-    --s->args_ref;
 
     return optind;
 }
