@@ -2550,6 +2550,7 @@ static inline void next_nomacro1(void)
     TokenSym *ts;
     uint8_t *p, *p1;
     unsigned int h;
+    int is_dec;
 
     p = file->buf_ptr;
 redo_no_start:
@@ -2778,6 +2779,15 @@ redo_no_start:
         break;
 
     case '0':
+        t = c;
+        cstr_reset(&tokcstr);
+        cstr_ccat(&tokcstr, c);
+        PEEKC(c, p);
+        is_dec = 1;
+        if ((c == 'x') || (c == 'o') || (c == 'b'))
+            is_dec = 0;
+        goto parse_num;
+
     case '1':
     case '2':
     case '3':
@@ -2787,17 +2797,27 @@ redo_no_start:
     case '7':
     case '8':
     case '9':
+        is_dec = 1;
+        t = c;
         cstr_reset(&tokcstr);
-        /* after the first digit, accept digits, alpha, '.' or sign if
-           prefixed by 'eEpP' */
+        cstr_ccat(&tokcstr, c);
+        PEEKC(c, p);
     parse_num:
         for (;;) {
+            if (parse_flags & PARSE_FLAG_ASM_FILE) {
+                if (!((isidnum_table[c - CH_EOF] & (IS_ID | IS_NUM)) || (c == '.')
+                      || ((c == '+' || c == '-')
+                          && (((t == 'e' || t == 'E') && is_dec)
+                              || ((t == 'p' || t == 'P') && !is_dec)))))
+                    break;
+            } else if (!((isidnum_table[c - CH_EOF] & (IS_ID | IS_NUM)) || c == '.'
+                         || ((c == '+' || c == '-')
+                             && (t == 'e' || t == 'E' || t == 'p' || t == 'P'))))
+                break;
+
             t = c;
             cstr_ccat(&tokcstr, c);
             PEEKC(c, p);
-            if (!((isidnum_table[c - CH_EOF] & (IS_ID | IS_NUM)) || c == '.'
-                  || ((c == '+' || c == '-') && (t == 'e' || t == 'E' || t == 'p' || t == 'P'))))
-                break;
         }
         /* We add a trailing '\0' to ease parsing */
         cstr_ccat(&tokcstr, '\0');
@@ -2811,6 +2831,8 @@ redo_no_start:
         /* special dot handling because it can also start a number */
         PEEKC(c, p);
         if (isnum(c)) {
+            t = '.';
+            is_dec = 1;
             cstr_reset(&tokcstr);
             cstr_ccat(&tokcstr, '.');
             goto parse_num;
