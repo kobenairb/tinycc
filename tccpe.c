@@ -1787,21 +1787,7 @@ static void pe_add_runtime_ex(TCCState *s1, struct pe_info *pe)
                     start_symbol);
 
     if (0 == s1->nostdlib) {
-        static const char *libs[] = {
-#if defined(TCC_TARGET_X86_64)
-            "tcc1-win64",
-#elif defined(TCC_TARGET_I386)
-            "tcc1-win32",
-#else
-            "tcc1",
-#endif
-            "msvcrt",
-            "kernel32",
-            "",
-            "user32",
-            "gdi32",
-            NULL
-        };
+        static const char *libs[] = {"tcc1", "msvcrt", "kernel32", "", "user32", "gdi32", NULL};
         const char **pp, *p;
         for (pp = libs; 0 != (p = *pp); ++pp) {
             if (0 == *p) {
