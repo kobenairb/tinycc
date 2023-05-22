@@ -194,7 +194,7 @@ typedef union CValue {
     unsigned long long ull;
     struct CString *cstr;
     void *ptr;
-    int tab[1];
+    int tab[2];
 } CValue;
 
 /* value on stack */
@@ -339,7 +339,7 @@ typedef struct BufferedFile
    source several times) */
 typedef struct ParseState
 {
-    int *macro_ptr;
+    const int *macro_ptr;
     int line_num;
     int tok;
     CValue tokc;
@@ -937,7 +937,7 @@ ST_FUNC int ieee_finite(double d);
 ST_DATA struct BufferedFile *file;
 ST_DATA int ch, tok;
 ST_DATA CValue tokc;
-ST_DATA int *macro_ptr;
+ST_DATA const int *macro_ptr;
 ST_DATA int parse_flags;
 ST_DATA int tok_flags;
 ST_DATA CString tokcstr; /* current parsed string, if any */
