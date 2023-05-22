@@ -16,6 +16,14 @@
 
 #endif
 
+#if defined(_WIN32)
+#define LONG_LONG_FORMAT "%lld"
+#define ULONG_LONG_FORMAT "%llu"
+#else
+#define LONG_LONG_FORMAT "%Ld"
+#define ULONG_LONG_FORMAT "%Lu"
+#endif
+
 // MinGW has 80-bit rather than 64-bit long double which isn't compatible with TCC or MSVC
 #if defined(_WIN32) && defined(__GNUC__)
 #define LONG_DOUBLE double
@@ -261,7 +269,7 @@ void macro_test(void)
     printf("func='%s'\n", __FUNCTION__);
 
     /* complicated macros in glibc */
-    printf("INT64_MIN=%Ld\n", INT64_MIN);
+    printf("INT64_MIN=" LONG_LONG_FORMAT "\n", INT64_MIN);
     {
         int a;
         a = 1;
@@ -1704,14 +1712,20 @@ void lloptest(long long a, long long b)
     ua = a;
     ub = b;
     /* arith */
-    printf("arith: %Ld %Ld %Ld\n", a + b, a - b, a * b);
+    printf("arith: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n",
+           a + b,
+           a - b,
+           a * b);
 
     if (b != 0) {
-        printf("arith1: %Ld %Ld\n", a / b, a % b);
+        printf("arith1: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n", a / b, a % b);
     }
 
     /* binary */
-    printf("bin: %Ld %Ld %Ld\n", a & b, a | b, a ^ b);
+    printf("bin: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n",
+           a & b,
+           a | b,
+           a ^ b);
 
     /* tests */
     printf("test: %d %d %d %d %d %d\n", a == b, a != b, a<b, a> b, a >= b, a <= b);
@@ -1721,19 +1735,28 @@ void lloptest(long long a, long long b)
     /* arith2 */
     a++;
     b++;
-    printf("arith2: %Ld %Ld\n", a, b);
-    printf("arith2: %Ld %Ld\n", a++, b++);
-    printf("arith2: %Ld %Ld\n", --a, --b);
-    printf("arith2: %Ld %Ld\n", a, b);
+    printf("arith2: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n", a, b);
+    printf("arith2: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n", a++, b++);
+    printf("arith2: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n", --a, --b);
+    printf("arith2: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n", a, b);
     b = ub = 0;
     printf("not: %d %d %d %d\n", !a, !ua, !b, !ub);
 }
 
 void llshift(long long a, int b)
 {
-    printf("shift: %Ld %Ld %Ld\n", (unsigned long long) a >> b, a >> b, a << b);
-    printf("shiftc: %Ld %Ld %Ld\n", (unsigned long long) a >> 3, a >> 3, a << 3);
-    printf("shiftc: %Ld %Ld %Ld\n", (unsigned long long) a >> 35, a >> 35, a << 35);
+    printf("shift: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n",
+           (unsigned long long) a >> b,
+           a >> b,
+           a << b);
+    printf("shiftc: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n",
+           (unsigned long long) a >> 3,
+           a >> 3,
+           a << 3);
+    printf("shiftc: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n",
+           (unsigned long long) a >> 35,
+           a >> 35,
+           a << 35);
 }
 
 void llfloat(void)
@@ -1747,7 +1770,7 @@ void llfloat(void)
     ula = 0x72345678;
     la = (la << 20) | 0x12345;
     ula = ula << 33;
-    printf("la=%Ld ula=%Lu\n", la, ula);
+    printf("la=" LONG_LONG_FORMAT " ula=" ULONG_LONG_FORMAT "\n", la, ula);
 
     fa = la;
     da = la;
@@ -1757,7 +1780,7 @@ void llfloat(void)
     la = fa;
     lb = da;
     lc = lda;
-    printf("ftoll: %Ld %Ld %Ld\n", la, lb, lc);
+    printf("ftoll: " LONG_LONG_FORMAT " " LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n", la, lb, lc);
 
     fa = ula;
     da = ula;
@@ -1767,7 +1790,10 @@ void llfloat(void)
     ula = fa;
     ulb = da;
     ulc = lda;
-    printf("ftoull: %Lu %Lu %Lu\n", ula, ulb, ulc);
+    printf("ftoull: " ULONG_LONG_FORMAT " " ULONG_LONG_FORMAT " " ULONG_LONG_FORMAT "\n",
+           ula,
+           ulb,
+           ulc);
 }
 
 long long llfunc1(int a)
@@ -1797,10 +1823,14 @@ void longlong_test(void)
     ua = -2;
     a = ia;
     b = ua;
-    printf("%Ld %Ld\n", a, b);
-    printf("%Ld %Ld %Ld %Lx\n", (long long) 1, (long long) -2, 1LL, 0x1234567812345679);
+    printf(LONG_LONG_FORMAT " " LONG_LONG_FORMAT "\n", a, b);
+    printf(LONG_LONG_FORMAT " " LONG_LONG_FORMAT " " LONG_LONG_FORMAT " %Lx\n",
+           (long long) 1,
+           (long long) -2,
+           1LL,
+           0x1234567812345679);
     a = llfunc1(-3);
-    printf("%Ld\n", a);
+    printf(LONG_LONG_FORMAT "\n", a);
 
     lloptest(1000, 23);
     lloptest(0xff, 0x1234);
@@ -1841,7 +1871,7 @@ void longlong_test(void)
     b = 4294967295LL;
     printf("%d %d %d %d\n", a > b, a < b, a >= b, a <= b);
 
-    printf("%Ld\n", 0x123456789LLU);
+    printf(LONG_LONG_FORMAT "\n", 0x123456789LLU);
 }
 
 void manyarg_test(void)
@@ -1867,8 +1897,8 @@ void manyarg_test(void)
            7.8,
            8.9,
            9.0);
-    printf("%d %d %d %d %d %d %d %d %f %f %f %f %f %f %f %f %f %f "
-           "%Ld %Ld %f %f\n",
+    printf("%d %d %d %d %d %d %d %d %f %f %f %f %f %f %f %f %f %f " LONG_LONG_FORMAT
+           " " LONG_LONG_FORMAT " %f %f\n",
            1,
            2,
            3,
@@ -1891,8 +1921,8 @@ void manyarg_test(void)
            987654321986LL,
            42.0,
            43.0);
-    printf("%Lf %d %d %d %d %d %d %d %d %f %f %f %f %f %f %f %f %f %f "
-           "%Ld %Ld %f %f\n",
+    printf("%Lf %d %d %d %d %d %d %d %d %f %f %f %f %f %f %f %f %f %f " LONG_LONG_FORMAT
+           " " LONG_LONG_FORMAT " %f %f\n",
            ld,
            1,
            2,
@@ -1916,11 +1946,9 @@ void manyarg_test(void)
            987654321986LL,
            42.0,
            43.0);
-    /* XXX: known bug of x86-64 */
-#ifndef __x86_64__
     printf("%d %d %d %d %d %d %d %d %Lf\n", 1, 2, 3, 4, 5, 6, 7, 8, ld);
-    printf("%d %d %d %d %d %d %d %d %f %f %f %f %f %f %f %f %f %f "
-           "%Ld %Ld %f %f %Lf\n",
+    printf("%d %d %d %d %d %d %d %d %f %f %f %f %f %f %f %f %f %f " LONG_LONG_FORMAT
+           " " LONG_LONG_FORMAT "%f %f %Lf\n",
            1,
            2,
            3,
@@ -1945,7 +1973,7 @@ void manyarg_test(void)
            43.0,
            ld);
     printf("%d %d %d %d %d %d %d %d %f %f %f %f %f %f %f %f %f %f "
-           "%Lf %Ld %Ld %f %f %Lf\n",
+           "%Lf " LONG_LONG_FORMAT " " LONG_LONG_FORMAT " %f %f %Lf\n",
            1,
            2,
            3,
@@ -1970,7 +1998,6 @@ void manyarg_test(void)
            42.0,
            43.0,
            ld);
-#endif
 }
 
 void vprintf1(const char *fmt, ...)
@@ -2006,7 +2033,7 @@ void vprintf1(const char *fmt, ...)
                 break;
             case 'l':
                 ll = va_arg(ap, long long);
-                printf("%Ld", ll);
+                printf(LONG_LONG_FORMAT, ll);
                 break;
             case 'F':
                 ld = va_arg(ap, LONG_DOUBLE);
@@ -2054,10 +2081,15 @@ void stdarg_test(void)
              LONG_DOUBLE_LITERAL(1.2),
              LONG_DOUBLE_LITERAL(2.3),
              LONG_DOUBLE_LITERAL(3.4));
-#ifdef __x86_64__
-    /* a bug of x86's TCC */
-    vprintf1("%d %f %l %F %d %f %l %F\n", 1, 1.2, 3L, 4.5L, 6, 7.8, 9L, 0.1L);
-#endif
+    vprintf1("%d %f %l %F %d %f %l %F\n",
+             1,
+             1.2,
+             3LL,
+             LONG_DOUBLE_LITERAL(4.5),
+             6,
+             7.8,
+             9LL,
+             LONG_DOUBLE_LITERAL(0.1));
     vprintf1("%d %d %d %d %d %d %d %d %f %f %f %f %f %f %f %f\n",
              1,
              2,
