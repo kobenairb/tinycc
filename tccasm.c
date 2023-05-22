@@ -18,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifdef CONFIG_TCC_ASM
+
 #include "tcc.h"
 
 ST_FUNC int asm_get_local_label_name(TCCState *s1, unsigned int n)
@@ -954,6 +956,8 @@ static void parse_asm_operands(ASMOperand *operands, int *nb_operands_ptr, int i
     }
 }
 
+#endif
+
 static void parse_asm_str(CString *astr)
 {
     skip('(');
@@ -968,6 +972,20 @@ static void parse_asm_str(CString *astr)
     }
     cstr_ccat(astr, '\0');
 }
+
+/* Parse an asm label and return the label
+ * Don't forget to free the CString in the caller! */
+static void asm_label_instr(CString *astr)
+{
+    next();
+    parse_asm_str(astr);
+    skip(')');
+#ifdef ASM_DEBUG
+    printf("asm_alias: \"%s\"\n", (char *) astr->data);
+#endif
+}
+
+#ifdef CONFIG_TCC_ASM
 
 /* parse the GCC asm() instruction */
 ST_FUNC void asm_instr(void)
@@ -1096,3 +1114,5 @@ ST_FUNC void asm_global_instr(void)
 
     cstr_free(&astr);
 }
+
+#endif
