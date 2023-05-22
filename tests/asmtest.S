@@ -287,6 +287,8 @@ ljmp $0x100, $0x1000
 #else
 ljmp *0x100
 ljmp *(%rdi)
+ljmpl *(%esi)
+ljmpw *(%esi)
 #endif
 
 ret
@@ -484,6 +486,7 @@ L3:
     fwait
 
 bswap %edx
+bswapl %ecx
 xadd %ecx, %edx
 xaddb %dl, 0x1000
 xaddw %ax, 0x1000
@@ -515,6 +518,7 @@ fucomip %st(5), %st
  cmovns %edx, %edi
  cmovne %ax, %si
 #ifdef __x86_64__
+ bswapq %rsi
  cmovz %rdi,%rbx
 #endif
 
@@ -610,10 +614,17 @@ int $0x10
 #ifdef __x86_64__
     syscall
     sysret
+    sysretq
     lfence
     mfence
     sfence
+    prefetchnta 0x18(%rdx)
+    prefetcht0 (%rcx)
+    prefetcht1 (%rsi)
+    prefetcht2 (%rdi)
     clflush 0x1000(%rax,%rcx)
+    fxsaveq (%rdx)
+    fxrstorq (%rcx)
 #endif
 
     emms
@@ -670,13 +681,21 @@ int $0x10
     lgdt 0x1000
     lidt 0x1000
     lldt 0x1000
-    lmsw 0x1000
-    lsl 0x1000, %ecx
-    ltr 0x1000
-    
     sgdt 0x1000
     sidt 0x1000
     sldt 0x1000
+#ifdef __x86_64__
+    lgdtq 0x1000
+    lidtq 0x1000
+    sgdtq 0x1000
+    sidtq 0x1000
+
+    swapgs
+#endif
+
+    lmsw 0x1000
+    lsl 0x1000, %ecx
+    ltr 0x1000
     smsw 0x1000
     str 0x1000
     
