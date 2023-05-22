@@ -589,7 +589,7 @@ ST_FUNC int handle_eob(void)
 
     /* only tries to read if really end of buffer */
     if (bf->buf_ptr >= bf->buf_end) {
-        if (bf->fd != -1) {
+        if (bf->fd >= 0) {
 #if defined(PARSE_DEBUG)
             len = 1;
 #else
@@ -1792,7 +1792,7 @@ redo:
         /* store current file in stack, but increment stack later below */
         *s1->include_stack_ptr = file;
         i = tok == TOK_INCLUDE_NEXT ? file->include_next_index : 0;
-        n = 2 + s1->nb_tccinclude_paths + s1->nb_include_paths + s1->nb_sysinclude_paths;
+        n = 2 + s1->nb_include_paths + s1->nb_sysinclude_paths;
         for (; i < n; ++i) {
             char buf1[sizeof file->filename];
             CachedInclude *e;
@@ -1814,14 +1814,8 @@ redo:
 
             } else {
                 /* search in all the include paths */
-                int k, j = i - 2;
-
-                if (j < (k = s1->nb_tccinclude_paths))
-                    path = s1->tccinclude_paths[j];
-                else if ((j -= k) < s1->nb_include_paths)
-                    path = s1->include_paths[j];
-                else if ((j -= s1->nb_include_paths) < s1->nb_sysinclude_paths)
-                    path = s1->sysinclude_paths[j];
+                int j = i - 2, k = j - s1->nb_include_paths;
+                path = k < 0 ? s1->include_paths[j] : s1->sysinclude_paths[k];
                 pstrcpy(buf1, sizeof(buf1), path);
                 pstrcat(buf1, sizeof(buf1), "/");
             }
@@ -2637,6 +2631,8 @@ redo_no_start:
                 tcc_close();
                 s1->include_stack_ptr--;
                 p = file->buf_ptr;
+                if (p == file->buffer)
+                    tok_flags = TOK_FLAG_BOF | TOK_FLAG_BOL;
                 goto redo_no_start;
             }
         }
@@ -3010,7 +3006,7 @@ redo_no_start:
 keep_tok_flags:
     file->buf_ptr = p;
 #if defined(PARSE_DEBUG)
-    printf("token = %s\n", get_tok_str(tok, &tokc));
+    printf("token = %d %s\n", tok, get_tok_str(tok, &tokc));
 #endif
 }
 
@@ -3611,7 +3607,8 @@ ST_INLN void unget_tok(int last_tok)
 
 ST_FUNC void preprocess_start(TCCState *s1, int is_asm)
 {
-    char *buf;
+    CString cstr;
+    int i;
 
     s1->include_stack_ptr = s1->include_stack;
     s1->ifdef_stack_ptr = s1->ifdef_stack;
@@ -3627,25 +3624,24 @@ ST_FUNC void preprocess_start(TCCState *s1, int is_asm)
     set_idnum('$', s1->dollars_in_identifiers ? IS_ID : 0);
     set_idnum('.', is_asm ? IS_ID : 0);
 
-    buf = tcc_malloc(3 + strlen(file->filename));
-    sprintf(buf, "\"%s\"", file->filename);
-    tcc_define_symbol(s1, "__BASE_FILE__", buf);
-    tcc_free(buf);
+    cstr_new(&cstr);
+    cstr_cat(&cstr, "\"", -1);
+    cstr_cat(&cstr, file->filename, -1);
+    cstr_cat(&cstr, "\"", 0);
+    tcc_define_symbol(s1, "__BASE_FILE__", cstr.data);
 
-    if (s1->nb_cmd_include_files) {
-        CString cstr;
-        int i;
-        cstr_new(&cstr);
-        for (i = 0; i < s1->nb_cmd_include_files; i++) {
-            cstr_cat(&cstr, "#include \"", -1);
-            cstr_cat(&cstr, s1->cmd_include_files[i], -1);
-            cstr_cat(&cstr, "\"\n", -1);
-        }
+    cstr_reset(&cstr);
+    for (i = 0; i < s1->nb_cmd_include_files; i++) {
+        cstr_cat(&cstr, "#include \"", -1);
+        cstr_cat(&cstr, s1->cmd_include_files[i], -1);
+        cstr_cat(&cstr, "\"\n", -1);
+    }
+    if (cstr.size) {
         *s1->include_stack_ptr++ = file;
         tcc_open_bf(s1, "<command line>", cstr.size);
         memcpy(file->buffer, cstr.data, cstr.size);
-        cstr_free(&cstr);
     }
+    cstr_free(&cstr);
 
     if (is_asm)
         tcc_define_symbol(s1, "__ASSEMBLER__", NULL);

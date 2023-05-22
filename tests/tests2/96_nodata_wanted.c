@@ -79,7 +79,7 @@ te1:;
     dl += &de1 - &ds1;
     tl += &&te1 - &&ts1;
     printf("size of data/text:\n  %s/%s\n", dl ? "non-zero" : "zero", tl ? "non-zero" : "zero");
-    printf("# %d/%d\n", dl, tl);
+    /*printf("# %d/%d\n", dl, tl);*/
 }
 
 #endif
