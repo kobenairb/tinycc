@@ -1436,8 +1436,10 @@ ST_FUNC void build_got_entries(TCCState *s1)
                     break;
                 }
 
-                if (!s1->got)
+                if (!s1->got) {
                     build_got(s1);
+                    sym = &((ElfW(Sym) *) symtab_section->data)[sym_index];
+                }
                 if (type == R_X86_64_GOT32 || type == R_X86_64_GOTPCREL || type == R_X86_64_PLT32) {
                     unsigned long ofs;
                     /* look at the symbol got offset. If none, then add one */
