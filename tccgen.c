@@ -2048,6 +2048,12 @@ void vstore(void)
         if (!nocode_wanted) {
             size = type_size(&vtop->type, &align);
 
+            /* destination */
+            vswap();
+            vtop->type.t = VT_PTR;
+            gaddrof();
+
+            /* address of memcpy() */
 #ifdef TCC_ARM_EABI
             if (!(align & 7))
                 vpush_global_sym(&func_old_type, TOK_memcpy8);
@@ -2057,10 +2063,7 @@ void vstore(void)
 #endif
                 vpush_global_sym(&func_old_type, TOK_memcpy);
 
-            /* destination */
-            vpushv(vtop - 2);
-            vtop->type.t = VT_PTR;
-            gaddrof();
+            vswap();
             /* source */
             vpushv(vtop - 2);
             vtop->type.t = VT_PTR;
@@ -2068,9 +2071,6 @@ void vstore(void)
             /* type size */
             vpushi(size);
             gfunc_call(3);
-
-            vswap();
-            vpop();
         } else {
             vswap();
             vpop();
