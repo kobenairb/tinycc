@@ -532,12 +532,12 @@ typedef struct BufferedFile
     uint8_t *buf_end;
     int fd;
     struct BufferedFile *prev;
-    int line_num; /* current line number - here to simplify code */
-    int line_ref; /* tcc -E: last printed line */
-    int inc_path_index;
+    int line_num;           /* current line number - here to simplify code */
+    int line_ref;           /* tcc -E: last printed line */
     int ifndef_macro;       /* #ifndef macro / #endif search */
     int ifndef_macro_saved; /* saved ifndef_macro */
     int *ifdef_stack_ptr;   /* ifdef_stack value at the start of the file */
+    int include_next_index; /* next search path */
     char filename[1024];    /* filename */
     unsigned char unget[4];
     unsigned char buffer[1]; /* extra size for CH_EOB char */
