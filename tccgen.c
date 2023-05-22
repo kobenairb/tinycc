@@ -5740,7 +5740,7 @@ static void gen_function(Sym *sym)
     sym_push2(&local_stack, SYM_FIELD, 0, 0);
     gfunc_prolog(&sym->type);
 #ifdef CONFIG_TCC_BCHECK
-    if (tcc_state->do_bound_check && !strcmp(get_tok_str(sym->v, NULL), "main")) {
+    if (tcc_state->do_bounds_check && !strcmp(get_tok_str(sym->v, NULL), "main")) {
         int i;
 
         sym = local_stack;
