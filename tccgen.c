@@ -4289,6 +4289,34 @@ static void vpush_tokc(int t)
     vsetc(&type, VT_CONST, &tokc);
 }
 
+static void parse_builtin_params(int nc, const char *args)
+{
+    char c, sep = '(';
+    CType t;
+    if (nc)
+        nocode_wanted++;
+    next();
+    while ((c = *args++)) {
+        skip(sep);
+        sep = ',';
+        switch (c) {
+        case 'e':
+            expr_eq();
+            continue;
+        case 't':
+            parse_type(&t);
+            vpush(&t);
+            continue;
+        default:
+            tcc_error("internal error");
+            break;
+        }
+    }
+    skip(')');
+    if (nc)
+        nocode_wanted--;
+}
+
 ST_FUNC void unary(void)
 {
     int n, t, align, size, r, sizeof_caller;
@@ -4492,28 +4520,19 @@ tok_next:
         vtop->type.t |= VT_UNSIGNED;
         break;
 
-    case TOK_builtin_expect: {
+    case TOK_builtin_expect:
         /* __builtin_expect is a no-op for now */
-        next();
-        skip('(');
-        expr_eq();
-        skip(',');
-        expr_eq();
+        parse_builtin_params(0, "ee");
         vpop();
-        skip(')');
-    } break;
-    case TOK_builtin_types_compatible_p: {
-        CType type1, type2;
-        next();
-        skip('(');
-        parse_type(&type1);
-        skip(',');
-        parse_type(&type2);
-        skip(')');
-        type1.t &= ~(VT_CONSTANT | VT_VOLATILE);
-        type2.t &= ~(VT_CONSTANT | VT_VOLATILE);
-        vpushi(is_compatible_types(&type1, &type2));
-    } break;
+        break;
+    case TOK_builtin_types_compatible_p:
+        parse_builtin_params(0, "tt");
+        vtop[-1].type.t &= ~(VT_CONSTANT | VT_VOLATILE);
+        vtop[0].type.t &= ~(VT_CONSTANT | VT_VOLATILE);
+        n = is_compatible_types(&vtop[-1].type, &vtop[0].type);
+        vtop -= 2;
+        vpushi(n);
+        break;
     case TOK_builtin_choose_expr: {
         int64_t c;
         next();
@@ -4539,18 +4558,12 @@ tok_next:
         }
         skip(')');
     } break;
-    case TOK_builtin_constant_p: {
-        int res;
-        next();
-        skip('(');
-        nocode_wanted++;
-        expr_eq();
-        res = (vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
-        vpop();
-        nocode_wanted--;
-        skip(')');
-        vpushi(res);
-    } break;
+    case TOK_builtin_constant_p:
+        parse_builtin_params(1, "e");
+        n = (vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
+        vtop--;
+        vpushi(n);
+        break;
     case TOK_builtin_frame_address:
     case TOK_builtin_return_address: {
         int tok1 = tok;
@@ -4583,40 +4596,28 @@ tok_next:
     } break;
 #ifdef TCC_TARGET_X86_64
 #ifdef TCC_TARGET_PE
-    case TOK_builtin_va_start: {
-        next();
-        skip('(');
-        expr_eq();
-        skip(',');
-        expr_eq();
-        skip(')');
+    case TOK_builtin_va_start:
+        parse_builtin_params(0, "ee");
         if ((vtop->r & VT_VALMASK) != VT_LOCAL)
             tcc_error("__builtin_va_start expects a local variable");
         vtop->r &= ~VT_LVAL;
         vtop->type = char_pointer_type;
         vtop->c.i += 8;
         vstore();
-    } break;
+        break;
 #else
-    case TOK_builtin_va_arg_types: {
-        CType type;
-        next();
-        skip('(');
-        parse_type(&type);
-        skip(')');
-        vpushi(classify_x86_64_va_arg(&type));
-    } break;
+    case TOK_builtin_va_arg_types:
+        parse_builtin_params(0, "t");
+        vpushi(classify_x86_64_va_arg(&vtop->type));
+        vswap();
+        vpop();
+        break;
 #endif
 #endif
 
 #ifdef TCC_TARGET_ARM64
     case TOK___va_start: {
-        next();
-        skip('(');
-        expr_eq();
-        skip(',');
-        expr_eq();
-        skip(')');
+        parse_builtin_params(0, "ee");
         //xx check types
         gen_va_start();
         vpushi(0);
@@ -4625,24 +4626,16 @@ tok_next:
     }
     case TOK___va_arg: {
         CType type;
-        next();
-        skip('(');
-        expr_eq();
-        skip(',');
-        parse_type(&type);
-        skip(')');
+        parse_builtin_params(0, "et");
+        type = vtop->type;
+        vpop();
         //xx check types
         gen_va_arg(&type);
         vtop->type = type;
         break;
     }
     case TOK___arm64_clear_cache: {
-        next();
-        skip('(');
-        expr_eq();
-        skip(',');
-        expr_eq();
-        skip(')');
+        parse_builtin_params(0, "ee");
         gen_clear_cache();
         vpushi(0);
         vtop->type.t = VT_VOID;
