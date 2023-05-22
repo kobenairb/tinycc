@@ -2821,6 +2821,9 @@ do_decl:
                 v = tok;
                 if (v < TOK_UIDENT)
                     expect("identifier");
+                ss = sym_find(v);
+                if (ss)
+                    tcc_error("redefinition of enumerator '%s'", get_tok_str(v, NULL));
                 next();
                 if (tok == '=') {
                     next();
