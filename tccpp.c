@@ -530,8 +530,7 @@ ST_FUNC const char *get_tok_str(int v, CValue *cv)
         cstr_cat(&cstr_buf, "<linenumber>", 0);
         break;
 
-        /* above tokens have value, the ones below don't */
-
+    /* above tokens have value, the ones below don't */
     case TOK_LT:
         v = '<';
         goto addv;
@@ -544,6 +543,8 @@ ST_FUNC const char *get_tok_str(int v, CValue *cv)
         return strcpy(p, "<<=");
     case TOK_A_SAR:
         return strcpy(p, ">>=");
+    case TOK_EOF:
+        return strcpy(p, "<eof>");
     default:
         if (v < TOK_IDENT) {
             /* search in two bytes table */
@@ -1781,7 +1782,7 @@ redo:
                 if (c != '\"')
                     continue;
                 /* https://savannah.nongnu.org/bugs/index.php?50847 */
-                path = file->filename2;
+                path = file->true_filename;
                 pstrncpy(buf1, path, tcc_basename(path) - path);
 
             } else {
@@ -1909,9 +1910,11 @@ redo:
     _line_num:
         next();
         if (tok != TOK_LINEFEED) {
-            if (tok == TOK_STR)
+            if (tok == TOK_STR) {
+                if (file->true_filename == file->filename)
+                    file->true_filename = tcc_strdup(file->filename);
                 pstrcpy(file->filename, sizeof(file->filename), (char *) tokc.str.data);
-            else if (parse_flags & PARSE_FLAG_ASM_FILE)
+            } else if (parse_flags & PARSE_FLAG_ASM_FILE)
                 break;
             else
                 goto _line_err;

@@ -1781,8 +1781,8 @@ static void gen_opic(int op)
             /* treat (0 << x), (0 >> x) and (-1 >> x) as constant */
             vtop--;
         } else if (!const_wanted && c2
-                   && ((l2 == 0 && (op == '&' || op == '*')) || (l2 == -1 && op == '|')
-                       || (l2 == 0xffffffff && t2 != VT_LLONG && op == '|')
+                   && ((l2 == 0 && (op == '&' || op == '*'))
+                       || (op == '|' && (l2 == -1 || (l2 == 0xFFFFFFFF && t2 != VT_LLONG)))
                        || (l2 == 1 && (op == '%' || op == TOK_UMOD)))) {
             /* treat (x & 0), (x * 0), (x | -1) and (x % 1) as constant */
             if (l2 == 1)
@@ -1794,7 +1794,7 @@ static void gen_opic(int op)
                        || ((op == '+' || op == '-' || op == '|' || op == '^' || op == TOK_SHL
                             || op == TOK_SHR || op == TOK_SAR)
                            && l2 == 0)
-                       || (op == '&' && l2 == -1))) {
+                       || (op == '&' && (l2 == -1 || (l2 == 0xFFFFFFFF && t2 != VT_LLONG))))) {
             /* filter out NOP operations like x*1, x-0, x&-1... */
             vtop--;
         } else if (c2 && (op == '*' || op == TOK_PDIV || op == TOK_UDIV)) {
@@ -1844,7 +1844,12 @@ static void gen_opif(int op)
 {
     int c1, c2;
     SValue *v1, *v2;
-    long double f1, f2;
+#if defined _MSC_VER && defined _AMD64_
+    /* avoid bad optimization with f1 -= f2 for f1:-0.0, f2:0.0 */
+    volatile
+#endif
+        long double f1,
+        f2;
 
     v1 = vtop - 1;
     v2 = vtop;
@@ -3510,7 +3515,7 @@ static void struct_decl(CType *type, AttributeDef *ad, int u)
         if (v < TOK_IDENT)
             expect("struct/union/enum name");
         s = struct_find(v);
-        if (s && (s->scope == local_scope || (tok != '{' && tok != ';'))) {
+        if (s && (s->scope == local_scope || tok != '{')) {
             if (s->type.t != a)
                 tcc_error("redefinition of '%s'", get_tok_str(v, NULL));
             goto do_decl;
@@ -4383,6 +4388,8 @@ tok_next:
     case TOK_STR:
         /* string parsing */
         t = VT_BYTE;
+        if (tcc_state->char_is_unsigned)
+            t = VT_BYTE | VT_UNSIGNED;
     str_init:
         if (tcc_state->warn_write_strings)
             t |= VT_CONSTANT;

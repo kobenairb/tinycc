@@ -340,11 +340,10 @@ ST_FUNC int tcc_tool_impdef(TCCState *s1, int argc, char **argv)
     if (ret || !p) {
         fprintf(stderr,
                 "tcc: impdef: %s '%s'\n",
-                ret == 32   ? "can't read symbols from 32bit"
-                : ret == 64 ? "can't read symbols from 64bit"
-                : ret == -1 ? "can't find file"
-                : ret == 0  ? "no symbols found in"
-                            : "unknown file type",
+                ret == -1  ? "can't find file"
+                : ret == 1 ? "can't read symbols"
+                : ret == 0 ? "no symbols found in"
+                           : "unknown file type",
                 file);
         ret = 1;
         goto the_end;
