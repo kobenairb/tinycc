@@ -109,7 +109,7 @@ union float_long {
 };
 
 /* XXX: we don't support several builtin supports for now */
-#ifndef __x86_64__
+#if !defined(__x86_64__) && !defined(__arm__)
 
 /* XXX: use gcc/tcc intrinsic ? */
 #if defined(__i386__)
@@ -672,6 +672,28 @@ void __va_end(struct __va_list_struct *ap)
 #if defined(__x86_64__) || defined(__i386__)
 
 void __clear_cache(char *beginning, char *end) {}
+
+#elif defined(__arm__)
+
+#define _GNU_SOURCE
+#include <unistd.h>
+#include <sys/syscall.h>
+
+void __clear_cache(char *beginning, char *end)
+{
+/* __ARM_NR_cacheflush is kernel private and should not be used in user space.
+ * However, there is no ARM asm parser in tcc so we use it for now */
+#if 1
+    syscall(__ARM_NR_cacheflush);
+#else
+    __asm__("push {r7}\n\t"
+            "mov r7, #0xf0002\n\t"
+            "mov r2, #0\n\t"
+            "swi 0\n\t"
+            "pop {r7}\n\t"
+            "ret");
+#endif
+}
 
 #else
 #warning __clear_cache not defined for this architecture, avoid using tcc -run
