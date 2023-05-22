@@ -891,8 +891,9 @@ LIBTCCAPI TCCState *tcc_new(void)
     /* wint_t is unsigned int by default, but (signed) int on BSDs
        and unsigned short on windows.  Other OSes might have still
        other conventions, sigh.  */
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-    || defined(__NetBSD__) || defined(__OpenBSD__) tcc_define_symbol(s, "__WINT_TYPE__", "int");
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) \
+    || defined(__OpenBSD__)
+    tcc_define_symbol(s, "__WINT_TYPE__", "int");
 #else
     tcc_define_symbol(s, "__WINT_TYPE__", "unsigned int");
 #endif
