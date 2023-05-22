@@ -1613,7 +1613,7 @@ redo:
                 if (!IS_ABSPATH(buf))
                     continue;
                 buf1[0] = 0;
-                i = n; /* force end loop */
+                i = n - 1; /* force end loop */
 
             } else if (i == -1) {
                 /* search in current dir if "header.h" */
