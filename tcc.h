@@ -450,8 +450,8 @@ typedef struct Section
     struct Section *link;         /* link to another section */
     struct Section *reloc;        /* corresponding section for relocation, if any */
     struct Section *hash;         /* hash table for symbols */
-    struct Section *next;
-    char name[1]; /* section name */
+    struct Section *prev;         /* previous section on section stack */
+    char name[1];                 /* section name */
 } Section;
 
 typedef struct DLLReference
