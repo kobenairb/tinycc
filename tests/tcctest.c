@@ -1711,6 +1711,11 @@ LONG_DOUBLE strtold(const char *nptr, char **endptr);
             printf("Test 1.0 / x != 1.0 / +y returns %d (should be 1).\n", 1.0 / x != 1.0 / p); \
         else                                                                                    \
             printf("x != +y; this is wrong!\n");                                                \
+        p = -y;                                                                                 \
+        if (x == p)                                                                             \
+            printf("Test 1.0 / x != 1.0 / -y returns %d (should be 0).\n", 1.0 / x != 1.0 / p); \
+        else                                                                                    \
+            printf("x != -y; this is wrong!\n");                                                \
     }                                                                                           \
     void prefix##test(void)                                                                     \
     {                                                                                           \
