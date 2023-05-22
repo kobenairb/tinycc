@@ -1565,6 +1565,10 @@ LIBTCCAPI int tcc_set_output_type(TCCState *s, int output_type)
             put_extern_sym(sym, NULL, 0, 0);
     }
 #endif
+
+    if (s->output_type == TCC_OUTPUT_PREPROCESS)
+        print_defines();
+
     return 0;
 }
 
@@ -1839,6 +1843,7 @@ enum {
     TCC_OPTION_g,
     TCC_OPTION_c,
     TCC_OPTION_dumpversion,
+    TCC_OPTION_d,
     TCC_OPTION_float_abi,
     TCC_OPTION_static,
     TCC_OPTION_std,
@@ -1895,6 +1900,7 @@ static const TCCOption tcc_options[] = {
     {"g", TCC_OPTION_g, TCC_OPTION_HAS_ARG | TCC_OPTION_NOSEP},
     {"c", TCC_OPTION_c, 0},
     {"dumpversion", TCC_OPTION_dumpversion, 0},
+    {"d", TCC_OPTION_d, TCC_OPTION_HAS_ARG | TCC_OPTION_NOSEP},
 #ifdef TCC_TARGET_ARM
     {"mfloat-abi", TCC_OPTION_float_abi, TCC_OPTION_HAS_ARG},
 #endif
@@ -2060,6 +2066,15 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
             if (s->output_type)
                 tcc_warning("-c: some compiler action already specified (%d)", s->output_type);
             s->output_type = TCC_OUTPUT_OBJ;
+            break;
+        case TCC_OPTION_d:
+            if (*optarg == 'D')
+                s->dflag = 1;
+            else {
+                if (s->warn_unsupported)
+                    goto unsupported_option;
+                tcc_error("invalid option -- '%s'", r);
+            }
             break;
 #ifdef TCC_TARGET_ARM
         case TCC_OPTION_float_abi:
