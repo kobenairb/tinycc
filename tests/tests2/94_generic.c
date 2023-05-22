@@ -29,6 +29,7 @@ typedef int int_type1;
 int main()
 {
     int i = 0;
+    signed long int l = 2;
     struct b titi;
     const int *const ptr;
     const char *ti;
@@ -57,5 +58,7 @@ int main()
     i = _Generic(ti, const unsigned char *: 1, const char *: 4, char *: 3, const signed char *: 2);
     printf("%d\n", i);
     printf("%s\n", _Generic(i + 2L, long: "long", int: "int", long long: "long long"));
+    i = _Generic(l, long: 1, int: 2);
+    printf("%d\n", i);
     return 0;
 }
