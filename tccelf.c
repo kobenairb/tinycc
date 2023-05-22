@@ -652,6 +652,11 @@ ST_FUNC void relocate_section(TCCState *s1, Section *s)
             break;
         case R_ARM_COPY:
             break;
+        case R_ARM_V4BX:
+            /* trade Thumb support for ARMv4 support */
+            if ((0x0ffffff0 & *(int *) ptr) == 0x012FFF10)
+                *(int *) ptr ^= 0xE12FFF10 ^ 0xE1A0F000; /* BX Rm -> MOV PC, Rm */
+            break;
         default:
             fprintf(stderr,
                     "FIXME: handle reloc type %x at %lx [%.8x] to %lx\n",
@@ -2468,7 +2473,11 @@ ST_FUNC int tcc_load_object_file(TCCState *s1, int fd, unsigned long file_offset
                     goto invalid_reloc;
                 sym_index = old_to_new_syms[sym_index];
                 /* ignore link_once in rel section. */
-                if (!sym_index && !sm->link_once) {
+                if (!sym_index && !sm->link_once
+#ifdef TCC_TARGET_ARM
+                    && type != R_ARM_V4BX
+#endif
+                ) {
                 invalid_reloc:
                     error_noabort("Invalid relocation entry [%2d] '%s' @ %.8x",
                                   i,
