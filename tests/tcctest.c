@@ -646,6 +646,12 @@ union union2 {
 
 struct struct1 st1, st2;
 
+struct empty_mem
+{
+    /* nothing */;
+    int x;
+};
+
 int main(int argc, char **argv)
 {
     string_test();
