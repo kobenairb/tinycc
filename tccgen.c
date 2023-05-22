@@ -3018,9 +3018,6 @@ static void post_type(CType *type, AttributeDef *ad)
 
     if (tok == '(') {
         /* function declaration */
-        if ((type->t & VT_STATIC) && local_stack) {
-            error("Function without file scope cannot be static");
-        }
         next();
         l = 0;
         first = NULL;
@@ -4296,14 +4293,28 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         next();
         skip(';');
     } else if (tok == TOK_FOR) {
-        int e;
+        int e, c99_for_decl = 0;
         next();
         skip('(');
         if (tok != ';') {
-            gexpr();
-            vpop();
+            if (tok < TOK_UIDENT) {
+                // handle C99 for loop construct
+                c99_for_decl = 1;
+
+                /* record local declaration stack position */
+                s = local_stack;
+
+                decl(VT_LOCAL);
+                if (is_expr)
+                    vpop();
+            } else {
+                gexpr();
+                vpop();
+                skip(';');
+            }
+        } else {
+            skip(';');
         }
-        skip(';');
         d = ind;
         c = ind;
         a = 0;
@@ -4326,6 +4337,25 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         gjmp_addr(c);
         gsym(a);
         gsym_addr(b, c);
+
+        if (c99_for_decl) {
+            /* pop locally defined symbols */
+            if (is_expr) {
+                /* XXX: this solution makes only valgrind happy...
+                   triggered by gcc.c-torture/execute/20000917-1.c */
+                Sym *p;
+                switch (vtop->type.t & VT_BTYPE) {
+                case VT_PTR:
+                case VT_STRUCT:
+                case VT_ENUM:
+                case VT_FUNC:
+                    for (p = vtop->type.ref; p; p = p->prev)
+                        if (p->prev == s)
+                            error("unsupported expression type");
+                }
+            }
+            sym_pop(&local_stack, s);
+        }
     } else if (tok == TOK_DO) {
         next();
         a = 0;
@@ -4821,6 +4851,7 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
            to do it correctly (ideally, the expression parser should
            be used in all cases) */
         par_count = 0;
+        /* Coo: I think we must not deal '(' */
         if (tok == '(') {
             AttributeDef ad1;
             CType type1;
@@ -4845,10 +4876,14 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
         }
         s = type->ref;
         f = s->next;
+        /* Coo: skip empty struct */
+        while (f->next && (f->type.t & VT_BTYPE) == VT_STRUCT && !f->type.ref->c)
+            f = f->next;
         array_length = 0;
         index = 0;
         n = s->c;
         while (tok != '}') {
+            int bit_pos;
             decl_designator(type, sec, c, NULL, &f, size_only);
             index = f->c;
             if (!size_only && array_length < index) {
@@ -4858,28 +4893,31 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
             if (index > array_length)
                 array_length = index;
 
-            /* gr: skip fields from same union - ugly. */
-            while (f->next) {
-                ///printf("index: %2d %08x -- %2d %08x\n", f->c, f->type.t, f->next->c, f->next->type.t);
-                /* test for same offset */
-                if (f->next->c != f->c)
-                    break;
-                /* if yes, test for bitfield shift */
-                if ((f->type.t & VT_BITFIELD) && (f->next->type.t & VT_BITFIELD)) {
-                    int bit_pos_1 = (f->type.t >> VT_STRUCT_SHIFT) & 0x3f;
-                    int bit_pos_2 = (f->next->type.t >> VT_STRUCT_SHIFT) & 0x3f;
-                    //printf("bitfield %d %d\n", bit_pos_1, bit_pos_2);
-                    if (bit_pos_1 != bit_pos_2)
-                        break;
-                }
+            /* Coo: skip fields from same union */
+            if (!(f->type.t & VT_BITFIELD))
+                bit_pos = index * 8;
+            else
+                bit_pos = f->c * 8 + ((f->type.t >> VT_STRUCT_SHIFT) & 0x3f)
+                          + ((f->type.t >> (VT_STRUCT_SHIFT + 6)) & 0x3f);
+            do
                 f = f->next;
-            }
+            while (f
+                   && (((f->type.t & VT_BTYPE) == VT_STRUCT && !f->type.ref->c)
+                       || f->c * 8
+                                  + ((f->type.t & VT_BITFIELD)
+                                         ? ((f->type.t >> VT_STRUCT_SHIFT) & 0x3f)
+                                         : 0)
+                              < bit_pos));
 
-            f = f->next;
             if (no_oblock && f == NULL)
                 break;
             if (tok == '}')
                 break;
+            /* Coo: skip ')' in front of ',' for initializer */
+            while (tok == ')' && par_count) {
+                next();
+                par_count--;
+            }
             skip(',');
         }
         /* put zeros at the end */
