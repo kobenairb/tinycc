@@ -1454,6 +1454,8 @@ static void pragma_parse(TCCState *s1)
         }
         next();
         skip(')');
+    } else if (tok == TOK_once) {
+        add_cached_include(s1, file->filename, TOK_once);
     } else {
         tcc_warning("unknown #pragma %s", get_tok_str(tok, &tokc));
     }
@@ -1593,7 +1595,7 @@ redo:
                     }
 
             e = search_cached_include(s1, buf1);
-            if (e && define_find(e->ifndef_macro)) {
+            if (e && (define_find(e->ifndef_macro) || e->ifndef_macro == TOK_once)) {
                 /* no need to parse the include because the 'ifndef macro'
                    is defined */
 #ifdef INC_DEBUG
