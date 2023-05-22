@@ -884,7 +884,11 @@ static void asm_parse_directive(TCCState *s1)
 /* assemble a file */
 static int tcc_assemble_internal(TCCState *s1, int do_preprocess)
 {
+    int saved_nocode_wanted;
     int opcode;
+
+    saved_nocode_wanted = nocode_wanted;
+    nocode_wanted = 0;
 
     /* XXX: undefine C labels */
 
@@ -929,7 +933,7 @@ static int tcc_assemble_internal(TCCState *s1, int do_preprocess)
                 /* handle "extern void vide(void); __asm__("vide: ret");" as
                 "__asm__("globl vide\nvide: ret");" */
                 Sym *sym = sym_find(opcode);
-                if (sym && (sym->type.t & VT_EXTERN) && nocode_wanted) {
+                if (sym && (sym->type.t & VT_EXTERN) && saved_nocode_wanted) {
                     sym = label_find(opcode);
                     if (!sym) {
                         sym = label_push(&s1->asm_labels, opcode, 0);
@@ -958,6 +962,7 @@ static int tcc_assemble_internal(TCCState *s1, int do_preprocess)
 
     asm_free_labels(s1);
 
+    nocode_wanted = saved_nocode_wanted;
     return 0;
 }
 
