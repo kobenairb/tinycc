@@ -5551,22 +5551,43 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
            struct/union init */
         /* XXX: union needs only one init */
 
+        int par_count = 0;
         if (tok == '(') {
             AttributeDef ad1;
             CType type1;
             next();
-            if (tok != '(') {
+            if (tcc_state->old_struct_init_code) {
+                /* an old version of struct initialization.
+           It have a problems. But with a new version
+           linux 2.4.26 can't load ramdisk.
+         */
+                while (tok == '(') {
+                    par_count++;
+                    next();
+                }
                 if (!parse_btype(&type1, &ad1))
                     expect("cast");
                 type_decl(&type1, &ad1, &n, TYPE_ABSTRACT);
 #if 0
-            if (!is_assignable_types(type, &type1))
+        if (!is_assignable_types(type, &type1))
                     tcc_error("invalid type for cast");
 #endif
                 skip(')');
-            } else
-                unget_tok(tok);
+            } else {
+                if (tok != '(') {
+                    if (!parse_btype(&type1, &ad1))
+                        expect("cast");
+                    type_decl(&type1, &ad1, &n, TYPE_ABSTRACT);
+#if 0
+            if (!is_assignable_types(type, &type1))
+                    tcc_error("invalid type for cast");
+#endif
+                    skip(')');
+                } else
+                    unget_tok(tok);
+            }
         }
+
         no_oblock = 1;
         if (first || tok == '{') {
             skip('{');
@@ -5637,6 +5658,10 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
         }
         if (!no_oblock)
             skip('}');
+        while (par_count) {
+            skip(')');
+            par_count--;
+        }
     } else if (tok == '{') {
         next();
         decl_initializer(type, sec, c, first, size_only);
