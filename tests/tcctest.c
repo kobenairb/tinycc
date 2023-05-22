@@ -2720,8 +2720,8 @@ static __inline__ void sigdelset1(unsigned int *set, int _sig)
 
 static __inline__ __const__ unsigned int swab32(unsigned int x)
 {
-    __asm__("xchgb %b0,%h0\n\t" /* swap lower bytes */
-            "rorl $16,%0\n\t"   /* swap words       */
+    __asm__("xchgb %b0,%h0\n\t" /* swap lower bytes    */
+            "rorl $16,%0\n\t"   /* swap words        */
             "xchgb %b0,%h0"     /* swap higher bytes    */
             : "=q"(x)
             : "0"(x));
