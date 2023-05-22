@@ -1346,6 +1346,7 @@ void gen_op(int op)
                 swap(&t1, &t2);
             }
             type1 = vtop[-1].type;
+            type1.t &= ~VT_ARRAY;
 #ifdef TCC_TARGET_X86_64
             vpushll(pointed_size(&vtop[-1].type));
 #else
