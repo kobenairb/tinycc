@@ -2283,9 +2283,9 @@ redo_no_start:
         }
         break;
 
-    /* treat $ as allowed char in indentifier  */
+    /* dollar is allowed to start identifiers when not parsing asm */
     case '$':
-        if (!tcc_state->dollars_in_identifiers)
+        if (!tcc_state->dollars_in_identifiers || (parse_flags & PARSE_FLAG_ASM_FILE))
             goto parse_simple;
 
     case 'a':
@@ -2347,7 +2347,7 @@ redo_no_start:
         p++;
         for (;;) {
             c = *p;
-            if (!isidnum_table[c - CH_EOF])
+            if (!isidnum_table[c - CH_EOF] && (tcc_state->dollars_in_identifiers ? (c != '$') : 1))
                 break;
             h = TOK_HASH_FUNC(h, c);
             p++;
@@ -2382,7 +2382,8 @@ redo_no_start:
             p--;
             PEEKC(c, p);
         parse_ident_slow:
-            while (isidnum_table[c - CH_EOF]) {
+            while (isidnum_table[c - CH_EOF]
+                   || (tcc_state->dollars_in_identifiers ? (c == '$') : 0)) {
                 cstr_ccat(&tokcstr, c);
                 PEEKC(c, p);
             }
@@ -3206,9 +3207,9 @@ ST_FUNC void preprocess_new(void)
     const char *p, *r;
 
     /* init isid table */
+
     for (i = CH_EOF; i < 256; i++)
-        isidnum_table[i - CH_EOF] = (isid(i) || isnum(i)
-                                     || (tcc_state->dollars_in_identifiers ? i == '$' : 0));
+        isidnum_table[i - CH_EOF] = isid(i) || isnum(i);
 
     /* add all tokens */
     if (table_ident) {
