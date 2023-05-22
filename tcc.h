@@ -384,8 +384,8 @@ struct Attribute
     unsigned func_call : 3, /* calling convention (0..5), see below */
         aligned : 5,        /* alignement (0..16) */
         packed : 1, func_export : 1, func_import : 1, func_args : 5, func_proto : 1, mode : 4,
-        weak : 1, visibility : 2,
-        fill : 8; // 8 bits left to fit well in union below
+        weak : 1, visibility : 2, unsigned_enum : 1,
+        fill : 7; // 7 bits left to fit well in union below
 };
 
 /* GNUC attribute definition */

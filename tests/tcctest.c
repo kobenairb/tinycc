@@ -595,7 +595,7 @@ void enum_test()
 {
     enum test b1;
     /* The following should give no warning */
-    int *p = &b1;
+    unsigned *p = &b1;
     printf("enum:\n%d %d %d %d %d %d\n", E0, E1, E2, E3, E4, E5);
     b1 = 1;
     printf("b1=%d\n", b1);
