@@ -563,6 +563,7 @@ typedef struct ExprValue
 {
     uint64_t v;
     Sym *sym;
+    int pcrel;
 } ExprValue;
 
 #define MAX_ASM_OPERANDS 30
