@@ -266,10 +266,10 @@ static inline void write64le(unsigned char *p, uint64_t x)
 #ifdef TCC_TARGET_PE
 #define CONFIG_TCC_SYSINCLUDEPATHS "{B}/include;{B}/include/winapi"
 #else
-#define CONFIG_TCC_SYSINCLUDEPATHS                     \
-    ALSO_MUADIR(CONFIG_SYSROOT "/usr/local/include")   \
-    ":" ALSO_MUADIR(CONFIG_SYSROOT "/usr/include") ":" \
-                                                   "{B}/include"
+#define CONFIG_TCC_SYSINCLUDEPATHS                                                      \
+    "{B}/include"                                                                       \
+    ":" ALSO_MUADIR(CONFIG_SYSROOT "/usr/local/include") ":" ALSO_MUADIR(CONFIG_SYSROOT \
+                                                                         "/usr/include")
 #endif
 #endif
 
