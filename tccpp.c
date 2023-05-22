@@ -3717,6 +3717,7 @@ ST_FUNC int tcc_preprocess(TCCState *s1)
     do
         next();
     while (tok != TOK_EOF);
+    free_defines(define_start);
     return 0;
 #endif
 
