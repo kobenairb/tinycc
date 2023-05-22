@@ -1318,10 +1318,6 @@ ST_FUNC void tcc_add_bcheck(TCCState *s1)
                 0,
                 bounds_section->sh_num,
                 "__bounds_start");
-    /* add bound check code */
-#ifndef TCC_TARGET_PE
-    tcc_add_support(s1, "bcheck.o");
-#endif
 #ifdef TCC_TARGET_I386
     if (s1->output_type != TCC_OUTPUT_MEMORY) {
         /* add 'call __bound_init()' in .init section */
