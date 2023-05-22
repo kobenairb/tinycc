@@ -3191,11 +3191,9 @@ static void post_type(CType *type, AttributeDef *ad)
         }
         /* we push a anonymous symbol which will contain the function prototype */
         ad->func_args = arg_size;
-        t1 = type->t & VT_STORAGE;
-        type->t &= ~VT_STORAGE;
         s = sym_push(SYM_FIELD, type, INT_ATTR(ad), l);
         s->next = first;
-        type->t = t1 | VT_FUNC;
+        type->t = VT_FUNC;
         type->ref = s;
     } else if (tok == '[') {
         SValue *last_vtop = NULL;
@@ -3205,6 +3203,7 @@ static void post_type(CType *type, AttributeDef *ad)
         if (tok == TOK_RESTRICT1)
             next();
         n = -1;
+        t1 = 0;
         if (tok != ']') {
             gexpr();
             if ((vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST) {
@@ -3215,14 +3214,12 @@ static void post_type(CType *type, AttributeDef *ad)
             } else {
                 if (!is_integer_btype(vtop->type.t & VT_BTYPE))
                     error("size of variable length array should be an integer");
-                type->t |= VT_VLA;
+                t1 = VT_VLA;
                 last_vtop = vtop;
             }
         }
         skip(']');
         /* parse next post type */
-        t1 = type->t & (VT_STORAGE | VT_VLA);
-        type->t &= ~(VT_STORAGE | VT_VLA);
         post_type(type, ad);
         t1 |= type->t & VT_VLA;
 
@@ -3250,7 +3247,7 @@ static void type_decl(CType *type, AttributeDef *ad, int *v, int td)
 {
     Sym *s;
     CType type1, *type2;
-    int qualifiers;
+    int qualifiers, storage;
 
     while (tok == '*') {
         qualifiers = 0;
@@ -3302,7 +3299,10 @@ static void type_decl(CType *type, AttributeDef *ad, int *v, int td)
             *v = 0;
         }
     }
+    storage = type->t & VT_STORAGE;
+    type->t &= ~VT_STORAGE;
     post_type(type, ad);
+    type->t |= storage;
     if (tok == TOK_ATTRIBUTE1 || tok == TOK_ATTRIBUTE2)
         parse_attribute(ad);
 
