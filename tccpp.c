@@ -2795,6 +2795,7 @@ redo:
             } else {
                 /* end of macro string: free it */
                 tok_str_free(macro_ptr_allocated);
+                macro_ptr_allocated = NULL;
                 macro_ptr = NULL;
             }
             goto redo;
