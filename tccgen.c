@@ -5380,7 +5380,8 @@ static void block(int *bsym, int *csym, int is_expr)
             nocode_wanted |= 2;
         a = gvtst(1, 0);
         block(bsym, csym, 0);
-        nocode_wanted = saved_nocode_wanted;
+        if (cond != 1)
+            nocode_wanted = saved_nocode_wanted;
         c = tok;
         if (c == TOK_ELSE) {
             next();
@@ -5390,10 +5391,12 @@ static void block(int *bsym, int *csym, int is_expr)
             gsym(a);
             block(bsym, csym, 0);
             gsym(d); /* patch else jmp */
-            nocode_wanted = saved_nocode_wanted;
+            if (cond != 0)
+                nocode_wanted = saved_nocode_wanted;
         } else
             gsym(a);
     } else if (tok == TOK_WHILE) {
+        int saved_nocode_wanted;
         nocode_wanted &= ~2;
         next();
         d = ind;
@@ -5404,7 +5407,9 @@ static void block(int *bsym, int *csym, int is_expr)
         a = gvtst(1, 0);
         b = 0;
         ++local_scope;
+        saved_nocode_wanted = nocode_wanted;
         block(&a, &b, 0);
+        nocode_wanted = saved_nocode_wanted;
         --local_scope;
         if (!nocode_wanted)
             gjmp_addr(d);
@@ -5538,6 +5543,7 @@ static void block(int *bsym, int *csym, int is_expr)
         /* jump unless last stmt in top-level block */
         if (tok != '}' || local_scope != 1)
             rsym = gjmp(rsym);
+        nocode_wanted |= 2;
     } else if (tok == TOK_BREAK) {
         /* compute jump */
         if (!bsym)
@@ -5545,6 +5551,7 @@ static void block(int *bsym, int *csym, int is_expr)
         *bsym = gjmp(*bsym);
         next();
         skip(';');
+        nocode_wanted |= 2;
     } else if (tok == TOK_CONTINUE) {
         /* compute jump */
         if (!csym)
@@ -5555,6 +5562,7 @@ static void block(int *bsym, int *csym, int is_expr)
         skip(';');
     } else if (tok == TOK_FOR) {
         int e;
+        int saved_nocode_wanted;
         nocode_wanted &= ~2;
         next();
         skip('(');
@@ -5589,7 +5597,9 @@ static void block(int *bsym, int *csym, int is_expr)
             gsym(e);
         }
         skip(')');
+        saved_nocode_wanted = nocode_wanted;
         block(&a, &b, 0);
+        nocode_wanted = saved_nocode_wanted;
         if (!nocode_wanted)
             gjmp_addr(c);
         gsym(a);
@@ -5598,13 +5608,16 @@ static void block(int *bsym, int *csym, int is_expr)
         sym_pop(&local_stack, s, 0);
 
     } else if (tok == TOK_DO) {
+        int saved_nocode_wanted;
         nocode_wanted &= ~2;
         next();
         a = 0;
         b = 0;
         d = ind;
         vla_sp_restore();
+        saved_nocode_wanted = nocode_wanted;
         block(&a, &b, 0);
+        nocode_wanted = saved_nocode_wanted;
         skip(TOK_WHILE);
         skip('(');
         gsym(b);
@@ -5617,6 +5630,7 @@ static void block(int *bsym, int *csym, int is_expr)
         skip(';');
     } else if (tok == TOK_SWITCH) {
         struct switch_t *saved, sw;
+        int saved_nocode_wanted = nocode_wanted;
         next();
         skip('(');
         gexpr();
@@ -5632,6 +5646,7 @@ static void block(int *bsym, int *csym, int is_expr)
         saved = cur_switch;
         cur_switch = &sw;
         block(&a, csym, 0);
+        nocode_wanted = saved_nocode_wanted;
         a = gjmp(a); /* add implicit break */
         /* case lookup */
         gsym(b);
