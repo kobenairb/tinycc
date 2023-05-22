@@ -15,7 +15,7 @@ int add(int a, int b)
     return a + b;
 }
 
-char my_program[] = "#include <stdio.h> // printf()\n"
+char my_program[] = "#include <tcclib.h>\n" /* include the "Simple libc header for TCC" */
                     "extern int add(int a, int b);\n"
                     "int fib(int n)\n"
                     "{\n"
@@ -36,6 +36,7 @@ char my_program[] = "#include <stdio.h> // printf()\n"
 int main(int argc, char **argv)
 {
     TCCState *s;
+    int i;
     int (*func)(int);
 
     s = tcc_new();
@@ -45,8 +46,17 @@ int main(int argc, char **argv)
     }
 
     /* if tcclib.h and libtcc1.a are not installed, where can we find them */
-    if (argc == 2 && !memcmp(argv[1], "lib_path=", 9))
-        tcc_set_lib_path(s, argv[1] + 9);
+    for (i = 1; i < argc; ++i) {
+        char *a = argv[i];
+        if (a[0] == '-') {
+            if (a[1] == 'B')
+                tcc_set_lib_path(s, a + 2);
+            else if (a[1] == 'I')
+                tcc_add_include_path(s, a + 2);
+            else if (a[1] == 'L')
+                tcc_add_library_path(s, a + 2);
+        }
+    }
 
     /* MUST BE CALLED before any compilation */
     tcc_set_output_type(s, TCC_OUTPUT_MEMORY);

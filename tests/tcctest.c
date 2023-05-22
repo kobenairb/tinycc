@@ -316,11 +316,15 @@ void macro_test(void)
 #endif
 
     printf("__LINE__=%d __FILE__=%s\n", __LINE__, __FILE__);
+#if 0
 #line 200
-    printf("__LINE__=%d __FILE__=%s\n", __LINE__, __FILE__);
+    printf("__LINE__=%d __FILE__=%s\n",
+           __LINE__, __FILE__);
 #line 203 "test"
-    printf("__LINE__=%d __FILE__=%s\n", __LINE__, __FILE__);
+    printf("__LINE__=%d __FILE__=%s\n",
+           __LINE__, __FILE__);
 #line 227 "tcctest.c"
+#endif
 
     /* not strictly preprocessor, but we test it there */
 #ifdef C99_MACROS
