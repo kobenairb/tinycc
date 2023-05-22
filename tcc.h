@@ -260,6 +260,8 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #endif
 #elif defined __DragonFly__
 #define CONFIG_TCC_ELFINTERP "/usr/libexec/ld-elf.so.2"
+#elif defined __NetBSD__
+#define CONFIG_TCC_ELFINTERP "/usr/libexec/ld.elf_so"
 #elif defined __GNU__
 #define CONFIG_TCC_ELFINTERP "/lib/ld.so"
 #elif defined(TCC_TARGET_PE)
