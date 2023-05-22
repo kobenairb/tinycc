@@ -154,7 +154,7 @@ static UDWtype __udivmoddi4(UDWtype n, UDWtype d, UDWtype *rp)
     n0 = nn.s.low;
     n1 = nn.s.high;
 
-#if !UDIV_NEEDS_NORMALIZATION
+#if !defined(UDIV_NEEDS_NORMALIZATION)
     if (d1 == 0) {
         if (d0 > n1) {
             /* 0q = nn / 0D */
