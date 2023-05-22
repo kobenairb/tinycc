@@ -843,7 +843,13 @@ ST_FUNC int gv(int rc)
                 t = vtop->type.t;
                 t1 = t;
                 /* compute memory access type */
-                if (vtop->r & VT_LVAL_BYTE)
+                if (vtop->r & VT_REF)
+#ifdef TCC_TARGET_X86_64
+                    t = VT_PTR;
+#else
+                    t = VT_INT;
+#endif
+                else if (vtop->r & VT_LVAL_BYTE)
                     t = VT_BYTE;
                 else if (vtop->r & VT_LVAL_SHORT)
                     t = VT_SHORT;
@@ -3727,7 +3733,22 @@ tok_next:
             indir(); /* -> parent frame */
         }
     } break;
-#if defined(TCC_TARGET_X86_64) && !defined(TCC_TARGET_PE)
+#ifdef TCC_TARGET_X86_64
+#ifdef TCC_TARGET_PE
+    case TOK_builtin_va_start: {
+        next();
+        skip('(');
+        expr_eq();
+        skip(',');
+        expr_eq();
+        skip(')');
+        if ((vtop->r & VT_VALMASK) != VT_LOCAL)
+            tcc_error("__builtin_va_start expects a local variable");
+        vtop->r &= ~(VT_LVAL | VT_REF);
+        vtop->type = char_pointer_type;
+        vstore();
+    } break;
+#else
     case TOK_builtin_va_arg_types: {
         CType type;
         int bt;
@@ -3737,6 +3758,7 @@ tok_next:
         skip(')');
         vpushi(classify_x86_64_va_arg(&type));
     } break;
+#endif
 #endif
     case TOK_INC:
     case TOK_DEC:
