@@ -1759,7 +1759,7 @@ redo:
                 buf1[0] = 0;
 
             } else if (i == 1) {
-                /* search in current dir if "header.h" */
+                /* search in file's dir if "header.h" */
                 if (c != '\"')
                     continue;
                 path = file->filename;
@@ -1845,16 +1845,17 @@ redo:
         if (c > 1)
             tcc_error("#elif after #else");
         /* last #if/#elif expression was true: we skip */
-        if (c == 1)
-            goto skip;
-        c = expr_preprocess();
-        s1->ifdef_stack_ptr[-1] = c;
+        if (c == 1) {
+            c = 0;
+        } else {
+            c = expr_preprocess();
+            s1->ifdef_stack_ptr[-1] = c;
+        }
     test_else:
         if (s1->ifdef_stack_ptr == file->ifdef_stack_ptr + 1)
             file->ifndef_macro = 0;
     test_skip:
         if (!(c & 1)) {
-        skip:
             preprocess_skip();
             is_bof = 0;
             goto redo;
