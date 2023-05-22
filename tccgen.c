@@ -4926,7 +4926,7 @@ tok_next:
                 type_decl(&cur_type, &ad_tmp, &itmp, TYPE_ABSTRACT);
                 if (compare_types(&controlling_type, &cur_type, 0)) {
                     if (has_match) {
-                        // tcc_error("type march twice");
+                        // tcc_error("type match twice");
                     }
                     if (str)
                         tok_str_free(str);
