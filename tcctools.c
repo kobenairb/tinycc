@@ -525,6 +525,7 @@ ST_FUNC void gen_makedeps(TCCState *s, const char *target, const char *filename)
     fclose(depout);
 }
 
+#ifdef TCC_IS_NATIVE
 /* -------------------------------------------------------------- */
 /* run test snippets from file */
 
@@ -630,5 +631,6 @@ ST_FUNC int tcc_tool_test(TCCState *s, int argc, char **argv)
     tcc_free(buf);
     exit(0);
 }
+#endif /* TCC_IS_NATIVE */
 
 /* -------------------------------------------------------------- */
