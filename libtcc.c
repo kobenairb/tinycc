@@ -972,6 +972,11 @@ LIBTCCAPI TCCState *tcc_new(void)
     tcc_define_symbol(s, "__WCHAR_TYPE__", "int");
 #endif
 
+    /* glibc defines */
+    tcc_define_symbol(s,
+                      "__REDIRECT_NTH(name, proto, alias)",
+                      "name proto __asm__ (#alias) __THROW");
+
 #ifndef TCC_TARGET_PE
     /* default library paths */
 #if defined(TCC_TARGET_X86_64_CENTOS)
