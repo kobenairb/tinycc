@@ -2272,13 +2272,14 @@ PUB_FUNC void tcc_print_stats(TCCState *s, int64_t total_time)
         tt = 0.001;
     if (total_bytes < 1)
         total_bytes = 1;
-    printf("%d idents, %d lines, %d bytes, %0.3f s, %d lines/s, %0.1f MB/s\n",
-           tok_ident - TOK_IDENT,
-           total_lines,
-           total_bytes,
-           tt,
-           (int) (total_lines / tt),
-           total_bytes / tt / 1000000.0);
+    fprintf(stderr,
+            "%d idents, %d lines, %d bytes, %0.3f s, %d lines/s, %0.1f MB/s\n",
+            tok_ident - TOK_IDENT,
+            total_lines,
+            total_bytes,
+            tt,
+            (int) (total_lines / tt),
+            total_bytes / tt / 1000000.0);
 }
 
 PUB_FUNC void tcc_set_environment(TCCState *s)
