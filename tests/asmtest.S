@@ -236,6 +236,7 @@ lcall *(%rax)
 #endif
 
 jmp 0x1000
+jmp *(%edi)
 #ifdef __i386__
 jmp *%eax
 #else
@@ -474,6 +475,10 @@ fucomip %st(5), %st
  cmovo 0x1000, %eax
  cmovs 0x1000, %eax
  cmovns %edx, %edi
+ cmovne %ax, %si
+#ifdef __x86_64__
+ cmovz %rdi,%rbx
+#endif
 
 int $3
 int $0x10
