@@ -3328,6 +3328,7 @@ void other_constraints_test(void)
     printf("oc1: %d\n", ret == (unsigned long) &var);
 }
 
+#ifndef _WIN32
 /* Test global asm blocks playing with aliases.  */
 void base_func(void)
 {
@@ -3369,6 +3370,7 @@ char *get_asm_string(void)
     char *str = ((char *) bug_table) + bug_table[1];
     return str;
 }
+#endif
 
 unsigned int set;
 
@@ -3514,12 +3516,15 @@ label2:
     printf("set=0x%x\n", set);
     val = 0x01020304;
     printf("swab32(0x%08x) = 0x%0x\n", val, swab32(val));
+#ifndef _WIN32
     override_func1();
     override_func2();
     /* The base_func ref from the following inline asm should find
        the global one, not the local decl from this function.  */
     asm volatile(".weak override_func3\n.set override_func3, base_func");
     override_func3();
+    printf("asmstr: %s\n", get_asm_string());
+#endif
     /* Check that we can also load structs of appropriate layout
        into registers.  */
     asm volatile("" : "=r"(asmret) : "0"(s2));
@@ -3532,7 +3537,6 @@ label2:
     if (!somebool)
         printf("asmbool: failed\n");
 #endif
-    printf("asmstr: %s\n", get_asm_string());
     val = 43;
     fancy_copy(&val, &val2);
     printf("fancycpy(%d)=%d\n", val, val2);
@@ -3915,6 +3919,7 @@ typedef struct gate_struct64 gate_desc;
 gate_desc a_gate_desc;
 void attrib_test(void)
 {
+#ifndef _WIN32
     printf("attr: %d %d %d %d\n",
            sizeof(struct Spacked),
            sizeof(spacked),
@@ -3922,6 +3927,7 @@ void attrib_test(void)
            sizeof(spacked2));
     printf("attr: %d %d\n", sizeof(Spacked3), sizeof(spacked3));
     printf("attr: %d %d\n", sizeof(gate_desc), sizeof(a_gate_desc));
+#endif
 }
 extern __attribute__((__unused__)) char *__attribute__((__unused__))
     * strange_attrib_placement(void);

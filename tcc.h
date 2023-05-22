@@ -73,6 +73,7 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #pragma warning(disable : 4018) // signed/unsigned mismatch
 #pragma warning( \
         disable : 4146) // unary minus operator applied to unsigned type, result still unsigned
+#define ssize_t intptr_t
 #endif
 #undef CONFIG_TCC_STATIC
 #endif
