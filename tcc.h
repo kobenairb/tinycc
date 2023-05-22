@@ -286,6 +286,7 @@ typedef struct AttributeDef
         packed : 1, func_export : 1, func_import : 1, func_args : 5, mode : 4, weak : 1, resize : 1,
         fill : 10;
     struct Section *section;
+    int alias_target; /* token */
 } AttributeDef;
 
 /* gr: wrappers for casting sym->r for other purposes */
