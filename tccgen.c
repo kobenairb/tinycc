@@ -3885,11 +3885,10 @@ tok_next:
             vtop->c.i = !vtop->c.i;
         } else if ((vtop->r & VT_VALMASK) == VT_CMP)
             vtop->c.i ^= 1;
-        else if (!nocode_wanted) {
+        else {
             save_regs(1);
             vseti(VT_JMP, gvtst(1, 0));
-        } else
-            vtop--;
+        }
         break;
     case '~':
         next();
