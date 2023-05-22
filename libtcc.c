@@ -915,6 +915,7 @@ LIBTCCAPI void tcc_delete(TCCState *s1)
 
     /* free include paths */
     dynarray_reset(&s1->cached_includes, &s1->nb_cached_includes);
+    dynarray_reset(&s1->tccinclude_paths, &s1->nb_tccinclude_paths);
     dynarray_reset(&s1->include_paths, &s1->nb_include_paths);
     dynarray_reset(&s1->sysinclude_paths, &s1->nb_sysinclude_paths);
     dynarray_reset(&s1->cmd_include_files, &s1->nb_cmd_include_files);
@@ -955,6 +956,7 @@ LIBTCCAPI int tcc_set_output_type(TCCState *s, int output_type)
     if (!s->nostdinc) {
         /* default include paths */
         /* -isystem paths have already been handled */
+        tcc_add_tccinclude_path(s, CONFIG_TCC_TCCINCLUDEPATHS);
         tcc_add_sysinclude_path(s, CONFIG_TCC_SYSINCLUDEPATHS);
     }
 
@@ -988,6 +990,12 @@ LIBTCCAPI int tcc_set_output_type(TCCState *s, int output_type)
         tcc_add_crt(s, "crti.o");
     }
 #endif
+    return 0;
+}
+
+LIBTCCAPI int tcc_add_tccinclude_path(TCCState *s, const char *pathname)
+{
+    tcc_split_path(s, &s->tccinclude_paths, &s->nb_tccinclude_paths, pathname);
     return 0;
 }
 
@@ -1830,7 +1838,7 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int *pargc, char ***pargv, int optind)
             break;
         case TCC_OPTION_iwithprefix:
             snprintf(buf, sizeof buf, "{B}/%s", optarg);
-            tcc_add_sysinclude_path(s, buf);
+            tcc_add_tccinclude_path(s, buf);
             break;
         case TCC_OPTION_include:
             dynarray_add(&s->cmd_include_files, &s->nb_cmd_include_files, tcc_strdup(optarg));
