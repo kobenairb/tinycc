@@ -1,9 +1,7 @@
 #ifndef LIBTCC_H
 #define LIBTCC_H
 
-#ifdef LIBTCC_AS_DLL
-#define LIBTCCAPI __declspec(dllexport)
-#else
+#ifndef LIBTCCAPI
 #define LIBTCCAPI
 #endif
 

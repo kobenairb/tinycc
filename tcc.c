@@ -269,6 +269,16 @@ static void exec_other_tcc(TCCState *s, char **argv, const char *optarg)
 }
 #endif
 
+static void parse_option_D(TCCState *s1, const char *optarg)
+{
+    char *sym = tcc_strdup(optarg);
+    char *value = strchr(sym, '=');
+    if (value)
+        *value++ = '\0';
+    tcc_define_symbol(s1, sym, value);
+    tcc_free(sym);
+}
+
 static int parse_args(TCCState *s, int argc, char **argv)
 {
     int optind;
@@ -331,16 +341,9 @@ static int parse_args(TCCState *s, int argc, char **argv)
                 if (tcc_add_include_path(s, optarg) < 0)
                     error("too many include paths");
                 break;
-            case TCC_OPTION_D: {
-                char *sym, *value;
-                sym = (char *) optarg;
-                value = strchr(sym, '=');
-                if (value) {
-                    *value = '\0';
-                    value++;
-                }
-                tcc_define_symbol(s, sym, value);
-            } break;
+            case TCC_OPTION_D:
+                parse_option_D(s, optarg);
+                break;
             case TCC_OPTION_U:
                 tcc_undefine_symbol(s, optarg);
                 break;
@@ -350,12 +353,6 @@ static int parse_args(TCCState *s, int argc, char **argv)
             case TCC_OPTION_B:
                 /* set tcc utilities path (mainly for tcc development) */
                 tcc_set_lib_path(s, optarg);
-                /* append /include and add it as -isystem, as gcc does */
-                r = tcc_strdup(optarg);
-                r = tcc_realloc(r, strlen(r) + 8 + 1);
-                strcat(r, "/include");
-                tcc_add_sysinclude_path(s, r);
-                tcc_free(r);
                 break;
             case TCC_OPTION_l:
                 dynarray_add((void ***) &files, &nb_files, r);
@@ -363,14 +360,14 @@ static int parse_args(TCCState *s, int argc, char **argv)
                 break;
             case TCC_OPTION_pthread:
                 was_pthread = 1;
-                tcc_define_symbol(s, "_REENTRANT", "1");
+                parse_option_D(s, "_REENTRANT");
                 break;
             case TCC_OPTION_bench:
                 do_bench = 1;
                 break;
 #ifdef CONFIG_TCC_BACKTRACE
             case TCC_OPTION_bt:
-                set_num_callers(atoi(optarg));
+                tcc_set_num_callers(atoi(optarg));
                 break;
 #endif
 #ifdef CONFIG_TCC_BCHECK
@@ -428,7 +425,8 @@ static int parse_args(TCCState *s, int argc, char **argv)
                 }
                 multiple_files = 0;
                 output_type = TCC_OUTPUT_MEMORY;
-            } break;
+                break;
+            }
             case TCC_OPTION_v:
                 do
                     ++s->verbose;
@@ -448,10 +446,10 @@ static int parse_args(TCCState *s, int argc, char **argv)
             case TCC_OPTION_rdynamic:
                 s->rdynamic = 1;
                 break;
-            case TCC_OPTION_Wl: {
+            case TCC_OPTION_Wl:
                 if ((r = (char *) tcc_set_linker(s, (char *) optarg, TRUE)))
                     error("unsupported linker option '%s'", r);
-            } break;
+                break;
             case TCC_OPTION_E:
                 output_type = TCC_OUTPUT_PREPROCESS;
                 break;

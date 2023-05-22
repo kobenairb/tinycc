@@ -2853,19 +2853,11 @@ static int filename_to_libname(TCCState *s1, const char filename[], char libname
         return 0;
     libprefix = !strncmp(filename, "lib", 3);
     if (!s1->static_link) {
-#ifdef TCC_TARGET_PE
-        if (!strcmp(ext, ".def")) {
-            size_t len = ext - filename;
-            pstrncpy(libname, filename, len);
-            return 1;
-        }
-#else
         if (libprefix && (!strcmp(ext, ".so"))) {
             size_t len = ext - filename - 3;
             pstrncpy(libname, filename + 3, len);
             return 1;
         }
-#endif
     } else {
         if (libprefix && (!strcmp(ext, ".a"))) {
             size_t len = ext - filename - 3;
@@ -2884,11 +2876,7 @@ static int filename_to_libname(TCCState *s1, const char filename[], char libname
 static void libname_to_filename(TCCState *s1, const char libname[], char filename[])
 {
     if (!s1->static_link) {
-#ifdef TCC_TARGET_PE
-        sprintf(filename, "%s.def", libname);
-#else
         sprintf(filename, "lib%s.so", libname);
-#endif
     } else {
         sprintf(filename, "lib%s.a", libname);
     }
@@ -3024,4 +3012,4 @@ ST_FUNC int tcc_load_ldscript(TCCState *s1)
     }
     return 0;
 }
-#endif
+#endif /* ndef TCC_TARGET_PE */
