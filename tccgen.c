@@ -3499,7 +3499,7 @@ static void post_type(CType *type, AttributeDef *ad)
 
             vla_runtime_type_size(type, &align);
             gen_op('*');
-            vset(&int_type, VT_LOCAL | VT_LVAL, loc);
+            vset(&int_type, VT_LOCAL | VT_LVAL, n);
             vswap();
             vstore();
         }
@@ -4804,7 +4804,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         gsym_addr(b, d);
     } else if (tok == '{') {
         Sym *llabel;
-        int block_vla_sp_loc, *saved_vla_sp_loc, saved_vla_flags;
+        int block_vla_sp_loc, *saved_vla_sp_loc, saved_vla_flags, *orig_vla_sp_loc;
 
         next();
         /* record local declaration stack position */
@@ -4818,6 +4818,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         block_vla_sp_loc = *(saved_vla_sp_loc = vla_sp_loc);
         if (saved_vla_sp_loc != &vla_sp_root_loc)
             vla_sp_loc = &block_vla_sp_loc;
+        orig_vla_sp_loc = vla_sp_loc;
 
         saved_vla_flags = vla_flags;
         vla_flags |= VLA_NEED_NEW_FRAME;
@@ -4873,11 +4874,10 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         /* Pop VLA frames and restore stack pointer if required */
         if (saved_vla_sp_loc != &vla_sp_root_loc)
             *saved_vla_sp_loc = block_vla_sp_loc;
-        if (vla_sp_loc
-            != (saved_vla_sp_loc == &vla_sp_root_loc ? &vla_sp_root_loc : &block_vla_sp_loc)) {
-            vla_sp_loc = saved_vla_sp_loc;
-            gen_vla_sp_restore(*vla_sp_loc);
+        if (vla_sp_loc != orig_vla_sp_loc) {
+            gen_vla_sp_restore(*saved_vla_sp_loc);
         }
+        vla_sp_loc = saved_vla_sp_loc;
         vla_flags = (vla_flags & ~VLA_SCOPE_FLAGS) | (saved_vla_flags & VLA_SCOPE_FLAGS);
 
         next();
@@ -5463,6 +5463,8 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
 
         vla_runtime_type_size(type, &a);
         gen_vla_alloc(type, a);
+        vla_flags = VLA_IN_SCOPE;
+        vla_sp_save();
         vset(type, VT_LOCAL | VT_LVAL, c);
         vswap();
         vstore();
