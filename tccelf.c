@@ -802,7 +802,7 @@ ST_FUNC void relocate_section(TCCState *s1, Section *s)
                           addr,
                           val);
             }
-            *(uint32_t *) ptr = 0x14000000 | (type == R_AARCH64_CALL26) << 31
+            *(uint32_t *) ptr = 0x14000000 | (uint32_t) (type == R_AARCH64_CALL26) << 31
                                 | ((val - addr) >> 2 & 0x3ffffff);
             break;
         case R_AARCH64_ADR_GOT_PAGE: {
@@ -2475,7 +2475,8 @@ static void tcc_output_elf(
                 offset++;
             }
             size = s->sh_size;
-            fwrite(s->data, 1, size, f);
+            if (size)
+                fwrite(s->data, 1, size, f);
             offset += size;
         }
     }
