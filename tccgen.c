@@ -4156,7 +4156,7 @@ tok_next:
         if (tok == TOK_INC || tok == TOK_DEC) {
             inc(1, tok);
             next();
-        } else if (tok == '.' || tok == TOK_ARROW) {
+        } else if (tok == '.' || tok == TOK_ARROW || tok == TOK_CDOUBLE) {
             int qualifiers;
             /* field */
             if (tok == TOK_ARROW)
@@ -4164,10 +4164,12 @@ tok_next:
             qualifiers = vtop->type.t & (VT_CONSTANT | VT_VOLATILE);
             test_lvalue();
             gaddrof();
-            next();
             /* expect pointer on structure */
             if ((vtop->type.t & VT_BTYPE) != VT_STRUCT)
                 expect("struct or union");
+            if (tok == TOK_CDOUBLE)
+                expect("field name");
+            next();
             s = vtop->type.ref;
             /* find field */
             tok |= SYM_FIELD;
