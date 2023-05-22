@@ -4158,7 +4158,7 @@ tok_next:
         } else if (tok == '(') {
             SValue ret;
             Sym *sa;
-            int nb_args, ret_nregs, ret_align, variadic;
+            int nb_args, ret_nregs, ret_align, regsize, variadic;
 
             /* function call  */
             if ((vtop->type.t & VT_BTYPE) != VT_FUNC) {
@@ -4183,7 +4183,7 @@ tok_next:
             /* compute first implicit argument if a structure is returned */
             if ((s->type.t & VT_BTYPE) == VT_STRUCT) {
                 variadic = (s->c == FUNC_ELLIPSIS);
-                ret_nregs = gfunc_sret(&s->type, variadic, &ret.type, &ret_align);
+                ret_nregs = gfunc_sret(&s->type, variadic, &ret.type, &ret_align, &regsize);
                 if (!ret_nregs) {
                     /* get some space for the returned structure */
                     size = type_size(&s->type, &align);
@@ -4263,6 +4263,10 @@ tok_next:
                 int addr, offset;
 
                 size = type_size(&s->type, &align);
+                /* We're writing whole regs often, make sure there's enough
+           space.  Assume register size is power of 2.  */
+                if (regsize > align)
+                    align = regsize;
                 loc = (loc - size) & -align;
                 addr = loc;
                 offset = 0;
@@ -4273,8 +4277,7 @@ tok_next:
                     vtop--;
                     if (--ret_nregs == 0)
                         break;
-                    /* XXX: compatible with arm only: ret_align == register_size */
-                    offset += ret_align;
+                    offset += regsize;
                 }
                 vset(&s->type, VT_LOCAL | VT_LVAL, addr);
             }
@@ -4848,8 +4851,8 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
 #else
             if ((func_vt.t & VT_BTYPE) == VT_STRUCT) {
                 CType type, ret_type;
-                int ret_align, ret_nregs;
-                ret_nregs = gfunc_sret(&func_vt, func_var, &ret_type, &ret_align);
+                int ret_align, ret_nregs, regsize;
+                ret_nregs = gfunc_sret(&func_vt, func_var, &ret_type, &ret_align, &regsize);
                 if (0 == ret_nregs) {
                     /* if returning structure, must copy it to implicit
                        first pointer arg location */
@@ -4887,9 +4890,10 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
                         /* We assume that when a structure is returned in multiple
                            registers, their classes are consecutive values of the
                            suite s(n) = 2^n */
+                        /* XXX This seems confused, if r == 0, this never
+               changes r.  */
                         r <<= 1;
-                        /* XXX: compatible with arm only: ret_align == register_size */
-                        vtop->c.i += ret_align;
+                        vtop->c.i += regsize;
                         vtop->r = VT_LOCAL | VT_LVAL;
                     }
                 }
