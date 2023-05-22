@@ -1531,6 +1531,35 @@ static void add_init_array_defines(TCCState *s1, const char *section_name)
                 sym_end);
 }
 
+static int tcc_add_support(TCCState *s1, const char *filename)
+{
+    char buf[1024];
+    snprintf(buf,
+             sizeof(buf),
+             "%s/%s/%s",
+             s1->tcc_lib_path,
+/* an cpu specific path inside tcc_lib_path, mainly for keeping libtcc1.a */
+#ifdef TCC_TARGET_I386
+             "i386"
+#endif
+#ifdef TCC_TARGET_X86_64
+             "x86-64"
+#endif
+#ifdef TCC_TARGET_ARM
+             "arm"
+#endif
+#ifdef TCC_TARGET_ARM64
+             "arm64"
+#endif
+#ifdef TCC_TARGET_C67
+             "C67"
+#endif
+             ,
+             filename);
+
+    return tcc_add_file(s1, buf);
+}
+
 ST_FUNC void tcc_add_bcheck(TCCState *s1)
 {
 #ifdef CONFIG_TCC_BCHECK
@@ -1571,35 +1600,6 @@ ST_FUNC void tcc_add_bcheck(TCCState *s1)
     }
 #endif
 #endif
-}
-
-static inline int tcc_add_support(TCCState *s1, const char *filename)
-{
-    char buf[1024];
-    snprintf(buf,
-             sizeof(buf),
-             "%s/%s/%s",
-             s1->tcc_lib_path,
-/* an cpu specific path inside tcc_lib_path, mainly for keeping libtcc1.a */
-#ifdef TCC_TARGET_I386
-             "i386"
-#endif
-#ifdef TCC_TARGET_X86_64
-             "x86-64"
-#endif
-#ifdef TCC_TARGET_ARM
-             "arm"
-#endif
-#ifdef TCC_TARGET_ARM64
-             "arm64"
-#endif
-#ifdef TCC_TARGET_C67
-             "C67"
-#endif
-             ,
-             filename);
-
-    return tcc_add_file(s1, buf);
 }
 
 /* add tcc runtime libraries */
