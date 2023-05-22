@@ -55,11 +55,10 @@ ST_DATA Sym *define_stack;
 ST_DATA Sym *global_label_stack;
 ST_DATA Sym *local_label_stack;
 
-ST_DATA int vla_sp_loc_tmp;  /* vla_sp_loc is set to this when the value won't be needed later */
+ST_DATA int vlas_in_scope;   /* number of VLAs that are currently in scope */
 ST_DATA int vla_sp_root_loc; /* vla_sp_loc for SP before any VLAs were pushed */
-ST_DATA int *
+ST_DATA int
     vla_sp_loc; /* Pointer to variable holding location to store stack pointer on the stack when modifying stack pointer */
-ST_DATA int vla_flags; /* VLA_* flags */
 
 ST_DATA SValue __vstack[1 + VSTACK_SIZE], *vtop;
 
@@ -90,7 +89,8 @@ static int decl0(int l, int is_for_loop_init);
 static void expr_eq(void);
 static void unary_type(CType *type);
 static void vla_runtime_type_size(CType *type, int *a);
-static void vla_sp_save(void);
+static void vla_sp_restore(void);
+static void vla_sp_restore_root(void);
 static int is_compatible_parameter_types(CType *type1, CType *type2);
 static void expr_type(CType *type);
 ST_FUNC void vpush64(int ty, unsigned long long v);
@@ -2257,15 +2257,17 @@ ST_FUNC void vla_runtime_type_size(CType *type, int *a)
     }
 }
 
-static void vla_sp_save(void)
+static void vla_sp_restore(void)
 {
-    if (!(vla_flags & VLA_SP_LOC_SET)) {
-        *vla_sp_loc = (loc -= PTR_SIZE);
-        vla_flags |= VLA_SP_LOC_SET;
+    if (vlas_in_scope) {
+        gen_vla_sp_restore(vla_sp_loc);
     }
-    if (!(vla_flags & VLA_SP_SAVED)) {
-        gen_vla_sp_save(*vla_sp_loc);
-        vla_flags |= VLA_SP_SAVED;
+}
+
+static void vla_sp_restore_root(void)
+{
+    if (vlas_in_scope) {
+        gen_vla_sp_restore(vla_sp_root_loc);
     }
 }
 
@@ -4789,10 +4791,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
     } else if (tok == TOK_WHILE) {
         next();
         d = ind;
-        if (vla_flags & VLA_IN_SCOPE) {
-            gen_vla_sp_restore(*vla_sp_loc);
-            vla_flags |= VLA_NEED_NEW_FRAME;
-        }
+        vla_sp_restore();
         skip('(');
         gexpr();
         skip(')');
@@ -4804,7 +4803,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         gsym_addr(b, d);
     } else if (tok == '{') {
         Sym *llabel;
-        int block_vla_sp_loc, *saved_vla_sp_loc, saved_vla_flags, *orig_vla_sp_loc;
+        int block_vla_sp_loc = vla_sp_loc, saved_vlas_in_scope = vlas_in_scope;
 
         next();
         /* record local declaration stack position */
@@ -4813,15 +4812,6 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         frame_bottom->next = scope_stack_bottom;
         scope_stack_bottom = frame_bottom;
         llabel = local_label_stack;
-
-        /* save VLA state */
-        block_vla_sp_loc = *(saved_vla_sp_loc = vla_sp_loc);
-        if (saved_vla_sp_loc != &vla_sp_root_loc)
-            vla_sp_loc = &block_vla_sp_loc;
-        orig_vla_sp_loc = vla_sp_loc;
-
-        saved_vla_flags = vla_flags;
-        vla_flags |= VLA_NEED_NEW_FRAME;
 
         /* handle local labels declarations */
         if (tok == TOK_LABEL) {
@@ -4872,13 +4862,11 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         sym_pop(&local_stack, s);
 
         /* Pop VLA frames and restore stack pointer if required */
-        if (saved_vla_sp_loc != &vla_sp_root_loc)
-            *saved_vla_sp_loc = block_vla_sp_loc;
-        if (vla_sp_loc != orig_vla_sp_loc) {
-            gen_vla_sp_restore(*saved_vla_sp_loc);
+        if (vlas_in_scope > saved_vlas_in_scope) {
+            vla_sp_loc = saved_vlas_in_scope ? block_vla_sp_loc : vla_sp_root_loc;
+            vla_sp_restore();
         }
-        vla_sp_loc = saved_vla_sp_loc;
-        vla_flags = (vla_flags & ~VLA_SCOPE_FLAGS) | (saved_vla_flags & VLA_SCOPE_FLAGS);
+        vlas_in_scope = saved_vlas_in_scope;
 
         next();
     } else if (tok == TOK_RETURN) {
@@ -4958,13 +4946,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         /* compute jump */
         if (!csym)
             tcc_error("cannot continue");
-        if (vla_flags & VLA_IN_SCOPE) {
-            /* If VLAs are in use, save the current stack pointer and
-             reset the stack pointer to what it was at function entry
-             (label will restore stack pointer in inner scopes) */
-            vla_sp_save();
-            gen_vla_sp_restore(vla_sp_root_loc);
-        }
+        vla_sp_restore_root();
         *csym = gjmp(*csym);
         next();
         skip(';');
@@ -4987,10 +4969,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         skip(';');
         d = ind;
         c = ind;
-        if (vla_flags & VLA_IN_SCOPE) {
-            gen_vla_sp_restore(*vla_sp_loc);
-            vla_flags |= VLA_NEED_NEW_FRAME;
-        }
+        vla_sp_restore();
         a = 0;
         b = 0;
         if (tok != ';') {
@@ -5001,10 +4980,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         if (tok != ')') {
             e = gjmp(0);
             c = ind;
-            if (vla_flags & VLA_IN_SCOPE) {
-                gen_vla_sp_restore(*vla_sp_loc);
-                vla_flags |= VLA_NEED_NEW_FRAME;
-            }
+            vla_sp_restore();
             gexpr();
             vpop();
             gjmp_addr(d);
@@ -5022,10 +4998,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         a = 0;
         b = 0;
         d = ind;
-        if (vla_flags & VLA_IN_SCOPE) {
-            gen_vla_sp_restore(*vla_sp_loc);
-            vla_flags |= VLA_NEED_NEW_FRAME;
-        }
+        vla_sp_restore();
         block(&a, &b, case_sym, def_sym, case_reg, 0);
         skip(TOK_WHILE);
         skip('(');
@@ -5119,14 +5092,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
                 if (s->r == LABEL_DECLARED)
                     s->r = LABEL_FORWARD;
             }
-            /* label already defined */
-            if (vla_flags & VLA_IN_SCOPE) {
-                /* If VLAs are in use, save the current stack pointer and
-                   reset the stack pointer to what it was at function entry
-                   (label will restore stack pointer in inner scopes) */
-                vla_sp_save();
-                gen_vla_sp_restore(vla_sp_root_loc);
-            }
+            vla_sp_restore_root();
             if (s->r & LABEL_FORWARD)
                 s->jnext = gjmp(s->jnext);
             else
@@ -5142,12 +5108,6 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         b = is_label();
         if (b) {
             /* label case */
-            if (vla_flags & VLA_IN_SCOPE) {
-                /* save/restore stack pointer across label
-                   this is a no-op when combined with the load immediately
-                   after the label unless we arrive via goto */
-                vla_sp_save();
-            }
             s = label_find(b);
             if (s) {
                 if (s->r == LABEL_DEFINED)
@@ -5158,10 +5118,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
                 s = label_push(&global_label_stack, b, LABEL_DEFINED);
             }
             s->jnext = ind;
-            if (vla_flags & VLA_IN_SCOPE) {
-                gen_vla_sp_restore(*vla_sp_loc);
-                vla_flags |= VLA_NEED_NEW_FRAME;
-            }
+            vla_sp_restore();
             /* we accept this, but it is a mistake */
         block_after_label:
             if (tok == '}') {
@@ -5456,20 +5413,17 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
         int a;
 
         /* save current stack pointer */
-        if (vla_flags & VLA_NEED_NEW_FRAME) {
-            vla_sp_save();
-            vla_flags = VLA_IN_SCOPE;
-            vla_sp_loc = &vla_sp_loc_tmp;
+        if (vlas_in_scope == 0) {
+            if (vla_sp_root_loc == -1)
+                vla_sp_root_loc = (loc -= PTR_SIZE);
+            gen_vla_sp_save(vla_sp_root_loc);
         }
 
         vla_runtime_type_size(type, &a);
         gen_vla_alloc(type, a);
-        vla_flags = VLA_IN_SCOPE;
-        vla_sp_save();
-        vset(type, VT_LOCAL | VT_LVAL, c);
-        vswap();
-        vstore();
-        vpop();
+        gen_vla_sp_save(c);
+        vla_sp_loc = c;
+        vlas_in_scope++;
     } else if (type->t & VT_ARRAY) {
         s = type->ref;
         n = s->c;
@@ -6032,8 +5986,8 @@ static void gen_function(Sym *sym)
     funcname = get_tok_str(sym->v, NULL);
     func_ind = ind;
     /* Initialize VLA state */
-    vla_sp_loc = &vla_sp_root_loc;
-    vla_flags = VLA_NEED_NEW_FRAME;
+    vla_sp_loc = -1;
+    vla_sp_root_loc = -1;
     /* put debug symbol */
     if (tcc_state->do_debug)
         put_func_debug(sym);
