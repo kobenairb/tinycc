@@ -3955,7 +3955,7 @@ static int parse_btype(CType *type, AttributeDef *ad)
         basic_type:
             next();
         basic_type1:
-            if (u == VT_SHORT) {
+            if (u == VT_SHORT || u == VT_LONG) {
                 if (st != -1 || (bt != -1 && bt != VT_INT))
                 tmbt:
                     tcc_error("too many basic types");
@@ -3986,8 +3986,8 @@ static int parse_btype(CType *type, AttributeDef *ad)
             } else if (t & VT_LONG) {
                 t = (t & ~(VT_LONG | VT_BTYPE)) | VT_LLONG;
             } else {
-                t |= VT_LONG;
-                typespec_found = 1;
+                u = VT_LONG;
+                goto basic_type;
             }
             next();
             break;
