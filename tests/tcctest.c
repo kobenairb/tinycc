@@ -44,7 +44,7 @@
 #define TCCLIB_INC <tcclib.h>
 #define TCCLIB_INC1 < tcclib
 #define TCCLIB_INC2 h >
-#define TCCLIB_INC3 "tcclib"
+#define TCCLIB_INC3 "tcclib.h"
 
 #include TCCLIB_INC
 
@@ -52,14 +52,24 @@
 
 #include TCCLIB_INC1.h>
 
-/* gcc 3.2 does not accept that (bug ?) */
-//#include TCCLIB_INC3 ".h"
+#include TCCLIB_INC3
 
 #include <tcclib.h>
 
 #include "tcclib.h"
 
 #include "tcctest.h"
+
+/* Test two more ways to include a file named like a pp-number */
+#define INC(name) <tests/name.h>
+#define funnyname 42test.h
+#define incdir tests /
+#define incname < incdir funnyname >
+#define __stringify(x) #x
+#define stringify(x) __stringify(x)
+#include INC(42test)
+#include incname
+#include stringify(funnyname)
 
 void intdiv_test();
 void string_test();
@@ -398,6 +408,11 @@ comment
     printf("%s\n", __BASE_FILE__);
     printf("%s\n", get_file_from_header());
     printf("%s\n", __FILE__);
+
+    /* Check that funnily named include was in fact included */
+    have_included_42test_h = 1;
+    have_included_42test_h_second = 1;
+    have_included_42test_h_third = 1;
 }
 
 static void print_num(char *fn, int line, int num)
@@ -2862,6 +2877,10 @@ void asm_test(void)
        asm block gets the outer one.  */
     int base_func = 42;
     void override_func3(void);
+    unsigned long asmret;
+#ifdef BOOL_ISOC99
+    _Bool somebool;
+#endif
 
     printf("inline asm:\n");
 
@@ -2905,6 +2924,18 @@ label2:
        the global one, not the local decl from this function.  */
     asm volatile(".weak override_func3\n.set override_func3, base_func");
     override_func3();
+    /* Check that we can also load structs of appropriate layout
+       into registers.  */
+    asm volatile("" : "=r"(asmret) : "0"(s2));
+    if (asmret != s2.addr)
+        printf("asmstr: failed\n");
+#ifdef BOOL_ISOC99
+    /* Check that the typesize correctly sets the register size to
+       8 bit.  */
+    asm volatile("cmp %1,%2; sete %0" : "=a"(somebool) : "r"(1), "r"(2));
+    if (!somebool)
+        printf("asmbool: failed\n");
+#endif
     return;
 label1:
     goto label2;
