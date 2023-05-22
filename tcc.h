@@ -222,7 +222,11 @@ typedef UINT_PTR uintptr_t;
 #endif
 
 /* library to use with CONFIG_USE_LIBGCC instead of libtcc1.a */
+#ifndef CONFIG_MULTIARCHDIR
+#define TCC_LIBGCC CONFIG_SYSROOT "/lib/libgcc_s.so.1"
+#else
 #define TCC_LIBGCC CONFIG_SYSROOT "/" CONFIG_LDDIR "/libgcc_s.so.1"
+#endif
 
 /* -------------------------------------------- */
 /* include the target specific definitions */
