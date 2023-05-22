@@ -78,21 +78,13 @@ ST_FUNC void asm_global_instr(void)
 #endif
 
 /********************************************************/
-
 #ifdef _WIN32
-// GCC appears to use '/' for relative paths and '\\' for absolute paths on Windows
 static char *normalize_slashes(char *path)
 {
     char *p;
-    if (path[1] == ':') {
-        for (p = path + 2; *p; ++p)
-            if (*p == '/')
-                *p = '\\';
-    } else {
-        for (p = path; *p; ++p)
-            if (*p == '\\')
-                *p = '/';
-    }
+    for (p = path; *p; ++p)
+        if (*p == '\\')
+            *p = '/';
     return path;
 }
 
@@ -129,7 +121,7 @@ void dlclose(void *p)
 #endif
 
 #ifdef LIBTCC_AS_DLL
-BOOL WINAPI DllMain(HANDLE hDll, DWORD dwReason, LPVOID lpReserved)
+BOOL WINAPI DllMain(HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved)
 {
     if (DLL_PROCESS_ATTACH == dwReason)
         tcc_module = hDll;
@@ -222,7 +214,7 @@ PUB_FUNC void *tcc_malloc(unsigned long size)
     void *ptr;
     ptr = malloc(size);
     if (!ptr && size)
-        tcc_error("memory full");
+        tcc_error("memory full (malloc)");
 #ifdef MEM_DEBUG
     mem_cur_size += malloc_usable_size(ptr);
     if (mem_cur_size > mem_max_size)
@@ -247,7 +239,7 @@ PUB_FUNC void *tcc_realloc(void *ptr, unsigned long size)
 #endif
     ptr1 = realloc(ptr, size);
     if (!ptr1 && size)
-        tcc_error("memory full");
+        tcc_error("memory full (realloc)");
 #ifdef MEM_DEBUG
     /* NOTE: count not correct if alloc error, but not critical */
     mem_cur_size += malloc_usable_size(ptr1);
@@ -498,23 +490,26 @@ ST_FUNC void put_extern_sym2(
 
 #ifdef TCC_TARGET_PE
         if (sym->type.t & VT_EXPORT)
-            other |= 1;
+            other |= ST_PE_EXPORT;
         if (sym_type == STT_FUNC && sym->type.ref) {
-            int attr = sym->type.ref->r;
-            if (FUNC_EXPORT(attr))
-                other |= 1;
-            if (FUNC_CALL(attr) == FUNC_STDCALL && can_add_underscore) {
-                sprintf(buf1, "_%s@%d", name, FUNC_ARGS(attr) * PTR_SIZE);
+            Sym *ref = sym->type.ref;
+            if (ref->a.func_export)
+                other |= ST_PE_EXPORT;
+            if (ref->a.func_call == FUNC_STDCALL && can_add_underscore) {
+                sprintf(buf1, "_%s@%d", name, ref->a.func_args * PTR_SIZE);
                 name = buf1;
-                other |= 2;
+                other |= ST_PE_STDCALL;
                 can_add_underscore = 0;
             }
         } else {
             if (find_elf_sym(tcc_state->dynsymtab_section, name))
-                other |= 4;
+                other |= ST_PE_IMPORT;
             if (sym->type.t & VT_IMPORT)
-                other |= 4;
+                other |= ST_PE_IMPORT;
         }
+#else
+        if (!(sym->type.t & VT_STATIC))
+            other = (sym->type.t & VT_VIS_MASK) >> VT_VIS_SHIFT;
 #endif
         if (tcc_state->leading_underscore && can_add_underscore) {
             buf1[0] = '_';
@@ -768,7 +763,7 @@ static int tcc_compile(TCCState *s1)
     func_old_type.t = VT_FUNC;
     func_old_type.ref = sym_push(SYM_FIELD, &int_type, FUNC_CDECL, FUNC_OLD);
 #ifdef TCC_TARGET_ARM
-    arm_init_types();
+    arm_init(s1);
 #endif
 
 #if 0
@@ -952,6 +947,16 @@ LIBTCCAPI TCCState *tcc_new(void)
     tcc_define_symbol(s, "__arm", NULL);
     tcc_define_symbol(s, "arm", NULL);
     tcc_define_symbol(s, "__APCS_32__", NULL);
+    tcc_define_symbol(s, "__ARMEL__", NULL);
+#if defined(TCC_ARM_EABI)
+    tcc_define_symbol(s, "__ARM_EABI__", NULL);
+#endif
+#if defined(TCC_ARM_HARDFLOAT)
+    s->float_abi = ARM_HARD_FLOAT;
+    tcc_define_symbol(s, "__ARM_PCS_VFP", NULL);
+#else
+    s->float_abi = ARM_SOFTFP_FLOAT;
+#endif
 #endif
 
 #ifdef TCC_TARGET_PE
@@ -988,8 +993,17 @@ LIBTCCAPI TCCState *tcc_new(void)
 
 #ifdef TCC_TARGET_PE
     tcc_define_symbol(s, "__WCHAR_TYPE__", "unsigned short");
+    tcc_define_symbol(s, "__WINT_TYPE__", "unsigned short");
 #else
     tcc_define_symbol(s, "__WCHAR_TYPE__", "int");
+    /* wint_t is unsigned int by default, but (signed) int on BSDs
+       and unsigned short on windows.  Other OSes might have still
+       other conventions, sigh.  */
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+    tcc_define_symbol(s, "__WINT_TYPE__", "int");
+#else
+    tcc_define_symbol(s, "__WINT_TYPE__", "unsigned int");
+#endif
 #endif
 
 #ifndef TCC_TARGET_PE
@@ -998,8 +1012,6 @@ LIBTCCAPI TCCState *tcc_new(void)
     tcc_define_symbol(s,
                       "__REDIRECT_NTH(name, proto, alias)",
                       "name proto __asm__ (#alias) __THROW");
-    /* default library paths */
-    tcc_add_library_path(s, CONFIG_TCC_LIBPATHS);
     /* paths for crt objects */
     tcc_split_path(s, (void ***) &s->crt_paths, &s->nb_crt_paths, CONFIG_TCC_CRTPREFIX);
 #endif
@@ -1038,6 +1050,9 @@ LIBTCCAPI TCCState *tcc_new(void)
 #endif
 #ifdef TCC_TARGET_I386
     s->seg_size = 32;
+#endif
+#ifdef TCC_IS_NATIVE
+    s->runtime_main = "main";
 #endif
     return s;
 }
@@ -1096,6 +1111,9 @@ LIBTCCAPI void tcc_delete(TCCState *s1)
     tcc_free(s1->runtime_mem);
 #endif
 #endif
+
+    if (s1->sym_attrs)
+        tcc_free(s1->sym_attrs);
 
     tcc_free(s1);
 }
@@ -1302,8 +1320,6 @@ LIBTCCAPI int tcc_add_symbol(TCCState *s, const char *name, const void *val)
        So it is handled here as if it were in a DLL. */
     pe_putimport(s, 0, name, (uintptr_t) val);
 #else
-    /* XXX: Same problem on linux but currently "solved" elsewhere
-       via the rather dirty 'runtime_plt_and_got' hack. */
     add_elf_sym(symtab_section,
                 (uintptr_t) val,
                 0,
@@ -1352,8 +1368,8 @@ LIBTCCAPI int tcc_set_output_type(TCCState *s, int output_type)
         put_stabs("", 0, 0, 0, 0);
     }
 
-#ifdef TCC_TARGET_PE
     tcc_add_library_path(s, CONFIG_TCC_LIBPATHS);
+#ifdef TCC_TARGET_PE
 #ifdef _WIN32
     tcc_add_systemdir(s);
 #endif
@@ -1557,6 +1573,10 @@ static int tcc_set_linker(TCCState *s, const char *option)
             } else
                 goto err;
 
+        } else if (link_option(option, "as-needed", &p)) {
+            ignoring = 1;
+        } else if (link_option(option, "O", &p)) {
+            ignoring = 1;
         } else if (link_option(option, "rpath=", &p)) {
             s->rpath = copy_linker_arg(p);
         } else if (link_option(option, "section-alignment=", &p)) {
@@ -1630,6 +1650,7 @@ enum {
     TCC_OPTION_b,
     TCC_OPTION_g,
     TCC_OPTION_c,
+    TCC_OPTION_float_abi,
     TCC_OPTION_static,
     TCC_OPTION_shared,
     TCC_OPTION_soname,
@@ -1649,7 +1670,6 @@ enum {
     TCC_OPTION_pedantic,
     TCC_OPTION_pthread,
     TCC_OPTION_run,
-    TCC_OPTION_norunsrc,
     TCC_OPTION_v,
     TCC_OPTION_w,
     TCC_OPTION_pipe,
@@ -1682,6 +1702,9 @@ static const TCCOption tcc_options[] = {
 #endif
     {"g", TCC_OPTION_g, TCC_OPTION_HAS_ARG | TCC_OPTION_NOSEP},
     {"c", TCC_OPTION_c, 0},
+#ifdef TCC_TARGET_ARM
+    {"mfloat-abi", TCC_OPTION_float_abi, TCC_OPTION_HAS_ARG},
+#endif
     {"static", TCC_OPTION_static, 0},
     {"shared", TCC_OPTION_shared, 0},
     {"soname", TCC_OPTION_soname, TCC_OPTION_HAS_ARG},
@@ -1689,7 +1712,6 @@ static const TCCOption tcc_options[] = {
     {"pedantic", TCC_OPTION_pedantic, 0},
     {"pthread", TCC_OPTION_pthread, 0},
     {"run", TCC_OPTION_run, TCC_OPTION_HAS_ARG | TCC_OPTION_NOSEP},
-    {"norunsrc", TCC_OPTION_norunsrc, 0},
     {"rdynamic", TCC_OPTION_rdynamic, 0},
     {"r", TCC_OPTION_r, 0},
     {"s", TCC_OPTION_s, 0},
@@ -1728,7 +1750,6 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
     const TCCOption *popt;
     const char *optarg, *r;
     int run = 0;
-    int norunsrc = 0;
     int pthread = 0;
     int optind = 0;
 
@@ -1740,8 +1761,7 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
         r = argv[optind++];
         if (r[0] != '-' || r[1] == '\0') {
             /* add a new file */
-            if (!run || !norunsrc)
-                dynarray_add((void ***) &s->files, &s->nb_files, tcc_strdup(r));
+            dynarray_add((void ***) &s->files, &s->nb_files, tcc_strdup(r));
             if (run) {
                 optind--;
                 /* argv[0] will be this file */
@@ -1818,6 +1838,18 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
         case TCC_OPTION_c:
             s->output_type = TCC_OUTPUT_OBJ;
             break;
+#ifdef TCC_TARGET_ARM
+        case TCC_OPTION_float_abi:
+            /* tcc doesn't support soft float yet */
+            if (!strcmp(optarg, "softfp")) {
+                s->float_abi = ARM_SOFTFP_FLOAT;
+                tcc_undefine_symbol(s, "__ARM_PCS_VFP");
+            } else if (!strcmp(optarg, "hard"))
+                s->float_abi = ARM_HARD_FLOAT;
+            else
+                tcc_error("unsupported float abi '%s'", optarg);
+            break;
+#endif
         case TCC_OPTION_static:
             s->static_link = 1;
             break;
@@ -1854,9 +1886,6 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
             s->output_type = TCC_OUTPUT_MEMORY;
             tcc_set_options(s, optarg);
             run = 1;
-            break;
-        case TCC_OPTION_norunsrc:
-            norunsrc = 1;
             break;
         case TCC_OPTION_v:
             do
