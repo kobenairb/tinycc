@@ -1836,14 +1836,15 @@ void manyarg_test(void)
 
 void vprintf1(const char *fmt, ...)
 {
-    va_list ap;
+    va_list ap, aq;
     const char *p;
     int c, i;
     double d;
     long long ll;
     long double ld;
 
-    va_start(ap, fmt);
+    va_start(aq, fmt);
+    va_copy(ap, aq);
 
     p = fmt;
     for (;;) {
@@ -1879,12 +1880,34 @@ void vprintf1(const char *fmt, ...)
         }
     }
 the_end:
+    va_end(aq);
+    va_end(ap);
+}
+
+struct myspace
+{
+    short int profile;
+};
+
+void stdarg_for_struct(struct myspace bob, ...)
+{
+    struct myspace george, bill;
+    va_list ap;
+    short int validate;
+
+    va_start(ap, bob);
+    bill = va_arg(ap, struct myspace);
+    george = va_arg(ap, struct myspace);
+    validate = va_arg(ap, int);
+    printf("stdarg_for_struct: %d %d %d %d\n", bob.profile, bill.profile, george.profile, validate);
     va_end(ap);
 }
 
 void stdarg_test(void)
 {
     long double ld = 1234567891234LL;
+    struct myspace bob;
+
     vprintf1("%d %d %d\n", 1, 2, 3);
     vprintf1("%f %d %f\n", 1.0, 2, 3.0);
     vprintf1("%l %l %d %f\n", 1234567891234LL, 987654321986LL, 3, 1234.0);
@@ -2030,6 +2053,9 @@ void stdarg_test(void)
              42.0,
              43.0,
              ld);
+
+    bob.profile = 42;
+    stdarg_for_struct(bob, bob, bob, bob.profile);
 }
 
 void whitespace_test(void)
