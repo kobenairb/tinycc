@@ -1572,7 +1572,7 @@ ST_FUNC void tcc_add_bcheck(TCCState *s1)
         return;
 
     /* XXX: add an object file to do that */
-    ptr = section_ptr_add(bounds_section, sizeof(unsigned long));
+    ptr = section_ptr_add(bounds_section, sizeof(*ptr));
     *ptr = 0;
     add_elf_sym(symtab_section,
                 0,
