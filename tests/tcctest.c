@@ -2519,6 +2519,12 @@ int dummy_impl_of_slf(void)
 }
 int some_lib_func(void) __attribute__((weak, alias("dummy_impl_of_slf")));
 
+int weak_toolate()
+{
+    return 0;
+}
+int weak_toolate() __attribute__((weak));
+
 void __attribute__((weak)) weak_test(void)
 {
     printf("weak_f1=%d\n", weak_f1 ? weak_f1() : 123);
