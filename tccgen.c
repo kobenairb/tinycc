@@ -3856,7 +3856,7 @@ tok_next:
         } else if (tok == '(') {
             SValue ret;
             Sym *sa;
-            int nb_args;
+            int nb_args, sret;
 
             /* function call  */
             if ((vtop->type.t & VT_BTYPE) != VT_FUNC) {
@@ -3880,18 +3880,26 @@ tok_next:
             ret.r2 = VT_CONST;
             /* compute first implicit argument if a structure is returned */
             if ((s->type.t & VT_BTYPE) == VT_STRUCT) {
-                /* get some space for the returned structure */
-                size = type_size(&s->type, &align);
-                loc = (loc - size) & -align;
-                ret.type = s->type;
-                ret.r = VT_LOCAL | VT_LVAL;
-                /* pass it as 'int' to avoid structure arg passing
-                   problems */
-                vseti(VT_LOCAL, loc);
-                ret.c = vtop->c;
-                nb_args++;
+                int ret_align;
+                sret = gfunc_sret(&s->type, &ret.type, &ret_align);
+                if (sret) {
+                    /* get some space for the returned structure */
+                    size = type_size(&s->type, &align);
+                    loc = (loc - size) & -align;
+                    ret.type = s->type;
+                    ret.r = VT_LOCAL | VT_LVAL;
+                    /* pass it as 'int' to avoid structure arg passing
+                       problems */
+                    vseti(VT_LOCAL, loc);
+                    ret.c = vtop->c;
+                    nb_args++;
+                }
             } else {
+                sret = 0;
                 ret.type = s->type;
+            }
+
+            if (!sret) {
                 /* return in register */
                 if (is_float(ret.type.t)) {
                     ret.r = reg_fret(ret.type.t);
@@ -3925,6 +3933,17 @@ tok_next:
             /* return value */
             vsetc(&ret.type, ret.r, &ret.c);
             vtop->r2 = ret.r2;
+            /* handle packed struct return */
+            if (((s->type.t & VT_BTYPE) == VT_STRUCT) && !sret) {
+                size = type_size(&s->type, &align);
+                loc = (loc - size) & -align;
+                int addr = loc;
+                vset(&ret.type, VT_LOCAL | VT_LVAL, addr);
+                vswap();
+                vstore();
+                vtop--;
+                vset(&s->type, VT_LOCAL | VT_LVAL, addr);
+            }
         } else {
             break;
         }
@@ -4465,27 +4484,11 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
             gexpr();
             gen_assign_cast(&func_vt);
             if ((func_vt.t & VT_BTYPE) == VT_STRUCT) {
-                CType type;
-                /* if returning structure, must copy it to implicit
-                   first pointer arg location */
-#ifdef TCC_ARM_EABI
-                int align, size;
-                size = type_size(&func_vt, &align);
-                if (size <= 4) {
-                    if ((vtop->r != (VT_LOCAL | VT_LVAL) || (vtop->c.i & 3)) && (align & 3)) {
-                        int addr;
-                        loc = (loc - size) & -4;
-                        addr = loc;
-                        type = func_vt;
-                        vset(&type, VT_LOCAL | VT_LVAL, addr);
-                        vswap();
-                        vstore();
-                        vset(&int_type, VT_LOCAL | VT_LVAL, addr);
-                    }
-                    vtop->type = int_type;
-                    gv(RC_IRET);
-                } else {
-#endif
+                CType type, ret_type;
+                int ret_align;
+                if (gfunc_sret(&func_vt, &ret_type, &ret_align)) {
+                    /* if returning structure, must copy it to implicit
+                       first pointer arg location */
                     type = func_vt;
                     mk_pointer(&type);
                     vset(&type, VT_LOCAL | VT_LVAL, func_vc);
@@ -4493,9 +4496,26 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
                     vswap();
                     /* copy structure value to pointer */
                     vstore();
-#ifdef TCC_ARM_EABI
+                } else {
+                    /* returning structure packed into registers */
+                    int size, addr, align;
+                    size = type_size(&func_vt, &align);
+                    if ((vtop->r != (VT_LOCAL | VT_LVAL) || (vtop->c.i & (ret_align - 1)))
+                        && (align & (ret_align - 1))) {
+                        loc = (loc - size) & -align;
+                        addr = loc;
+                        type = func_vt;
+                        vset(&type, VT_LOCAL | VT_LVAL, addr);
+                        vswap();
+                        vstore();
+                        vset(&ret_type, VT_LOCAL | VT_LVAL, addr);
+                    }
+                    vtop->type = ret_type;
+                    if (is_float(ret_type.t))
+                        gv(rc_fret(ret_type.t));
+                    else
+                        gv(RC_IRET);
                 }
-#endif
             } else if (is_float(func_vt.t)) {
                 gv(rc_fret(func_vt.t));
             } else {
