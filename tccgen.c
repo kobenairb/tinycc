@@ -3081,7 +3081,7 @@ static void post_type_args(CType *type, AttributeDef *ad)
     CType pt;
 
     /* function declaration */
-    next();
+    skip('(');
     l = 0;
     first = NULL;
     plast = &first;
@@ -3154,7 +3154,7 @@ static void post_type_array(CType *type, AttributeDef *ad)
     Sym *s;
 
     /* array definition */
-    next();
+    skip('[');
     if (tok == TOK_RESTRICT1)
         next();
     n = -1;
