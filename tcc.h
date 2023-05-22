@@ -223,9 +223,9 @@ typedef struct SValue
 /* symbol management */
 typedef struct Sym
 {
-    int v;  /* symbol token */
-    int a;  /* asm symbol token */
-    long r; /* associated register */
+    int v;           /* symbol token */
+    char *asm_label; /* associated asm label */
+    long r;          /* associated register */
     union {
         long c; /* associated number */
         int *d; /* define token stream */
