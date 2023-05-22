@@ -276,12 +276,11 @@ static void set_pages_executable(void *ptr, unsigned long length)
 static void *win64_add_function_table(TCCState *s1)
 {
     void *p = NULL;
-    int r;
     if (s1->uw_pdata) {
         p = (void *) s1->uw_pdata->sh_addr;
-        r = RtlAddFunctionTable((RUNTIME_FUNCTION *) p,
-                                s1->uw_pdata->data_offset / sizeof(RUNTIME_FUNCTION),
-                                text_section->sh_addr);
+        RtlAddFunctionTable((RUNTIME_FUNCTION *) p,
+                            s1->uw_pdata->data_offset / sizeof(RUNTIME_FUNCTION),
+                            text_section->sh_addr);
         s1->uw_pdata = NULL;
     }
     return p;
@@ -793,7 +792,7 @@ static TCCSyms tcc_syms[] = {
         {NULL, NULL},
 };
 
-ST_FUNC void *dlsym(int flag, const char *symbol)
+ST_FUNC void *dlsym(void *handle, const char *symbol)
 {
     TCCSyms *p;
     p = tcc_syms;
