@@ -1795,7 +1795,7 @@ static void pe_add_runtime(TCCState *s1, struct pe_info *pe)
                     start_symbol);
 
     if (0 == s1->nostdlib) {
-        static const char *libs[] = {"libtcc1.a", "msvcrt", "kernel32", "", "user32", "gdi32", NULL};
+        static const char *libs[] = {"libcrt.a", "msvcrt", "kernel32", "", "user32", "gdi32", NULL};
         const char **pp, *p;
         for (pp = libs; 0 != (p = *pp); ++pp) {
             if (0 == *p) {
