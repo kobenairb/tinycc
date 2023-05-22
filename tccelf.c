@@ -2316,7 +2316,9 @@ ST_FUNC int tcc_load_object_file(TCCState *s1, int fd, unsigned long file_offset
 #ifdef TCC_ARM_EABI
             sh->sh_type != SHT_ARM_EXIDX &&
 #endif
-            sh->sh_type != SHT_NOBITS && strcmp(sh_name, ".stabstr"))
+            sh->sh_type != SHT_NOBITS && sh->sh_type != SHT_PREINIT_ARRAY
+            && sh->sh_type != SHT_INIT_ARRAY && sh->sh_type != SHT_FINI_ARRAY
+            && strcmp(sh_name, ".stabstr"))
             continue;
         if (sh->sh_addralign < 1)
             sh->sh_addralign = 1;
