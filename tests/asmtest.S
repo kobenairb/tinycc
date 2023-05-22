@@ -9,7 +9,8 @@
    .int 1, 2, 3
    .align 8
    .byte 1
-   .align 16, 0x90
+/* .align 16, 0x90 gas is too clever for us with 0x90 fill */
+   .align 16, 0x91 /* 0x91 tests the non-clever behaviour */
    .skip 3
    .skip 15, 0x90
    .string "hello\0world"
@@ -210,8 +211,10 @@ jmp *0x1000
 ljmp $0x100, $0x1000
 
 ret
+retl
 
 ret $10
+retl $10
 
 lret
 
