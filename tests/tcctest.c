@@ -2045,13 +2045,6 @@ void bitfield_test(void)
     else
         printf("st1.f2 != -1\n");
 
-#ifndef __i386__
-    /* on i386 we don't correctly support long long bit-fields.
-       The bitfields can straddle long long boundaries (at least with
-       GCC bitfield layout) and code generation isn't prepared for this
-       (would have to work with two words in that case).  */
-    /* bit sizes below must be bigger than 32 since GCC doesn't allow
-       long-long bitfields whose size is not bigger than int */
     struct sbf2
     {
         long long f1 : 45;
@@ -2065,7 +2058,7 @@ void bitfield_test(void)
     st2.f3 = a;
     st2.f2++;
     printf("%lld %lld %lld\n", st2.f1, st2.f2, st2.f3);
-#endif
+
 #if 0
     Disabled for now until further clarification re GCC compatibility
     struct sbf3 {
@@ -2078,6 +2071,7 @@ void bitfield_test(void)
     } st3;
     printf("sizeof(st3) = %d\n", sizeof(st3));
 #endif
+
     struct sbf4
     {
         int x : 31;
