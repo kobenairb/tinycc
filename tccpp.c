@@ -2317,8 +2317,11 @@ static inline void next_nomacro1(void)
     p = file->buf_ptr;
 redo_no_start:
     c = *p;
+#if (__TINYC__ || __GNUC__)
+#else
     if (c & 0x80)
         goto parse_ident_fast;
+#endif
     switch (c) {
     case ' ':
     case '\t':
@@ -2425,6 +2428,7 @@ redo_no_start:
     case 'A' ... 'K':
     case 'M' ... 'Z':
     case '_':
+    case 0x80 ... 0xFF:
 #else
     case 'a':
     case 'b':
