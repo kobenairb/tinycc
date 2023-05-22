@@ -4000,7 +4000,7 @@ tok_next:
 #endif
             )
                 tcc_warning("implicit declaration of function '%s'", name);
-            s = external_global_sym(t, &func_old_type, 0);
+            s = external_sym(t, &func_old_type, 0, NULL);
         }
         if ((s->type.t & (VT_STATIC | VT_INLINE | VT_BTYPE)) == (VT_STATIC | VT_INLINE | VT_FUNC)) {
             /* if referencing an inline function, then we generate a
