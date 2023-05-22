@@ -56,7 +56,6 @@ case $targetos in
   DragonFly) noldl=yes;;
   OpenBSD)   noldl=yes;;
   FreeBSD)   noldl=yes;;
-  NetBSD)    noldl=yes;;
   *) ;;
 esac
 
@@ -71,52 +70,46 @@ if test -z "$source_path" -o "$source_path" = "." ; then
     source_path_used="no"
 fi
 
-classify_cpu ()
-{
-  cpu="$1"
-
-  case "$cpu" in
-    x86|i386|i486|i586|i686|i86pc|BePC|i686-AT386)
-      cpu="x86"
-    ;;
-    x86_64|amd64)
-      cpu="x86-64"
-    ;;
-    arm*)
-      case "$cpu" in
-        arm|armv4l)
-          cpuver=4
-        ;;
-        armv5tel|armv5tejl)
-          cpuver=5
-        ;;
-        armv6j|armv6l)
-          cpuver=6
-        ;;
-        armv7a|armv7l)
-          cpuver=7
-        ;;
-      esac
-      cpu="armv4l"
-    ;;
-    alpha)
-      cpu="alpha"
-    ;;
-    "Power Macintosh"|ppc|ppc64)
-      cpu="powerpc"
-    ;;
-    mips)
-      cpu="mips"
-    ;;
-    s390)
-      cpu="s390"
-    ;;
-    *)
-      echo "Unsupported CPU: $cpu"
-      exit 1
-    ;;
-  esac
-}
+case "$cpu" in
+  i386|i486|i586|i686|i86pc|BePC|i686-AT386)
+    cpu="x86"
+  ;;
+  x86_64|amd64)
+    cpu="x86-64"
+  ;;
+  arm*)
+    case "$cpu" in
+      arm|armv4l)
+        cpuver=4
+      ;;
+      armv5tel|armv5tejl)
+        cpuver=5
+      ;;
+      armv6j|armv6l)
+        cpuver=6
+      ;;
+      armv7a|armv7l)
+        cpuver=7
+      ;;
+    esac
+    cpu="armv4l"
+  ;;
+  alpha)
+    cpu="alpha"
+  ;;
+  "Power Macintosh"|ppc|ppc64)
+    cpu="powerpc"
+  ;;
+  mips)
+    cpu="mips"
+  ;;
+  s390)
+    cpu="s390"
+  ;;
+  *)
+    cpu="unknown"
+  ;;
+esac
 
 for opt do
   eval opt=\"$opt\"
@@ -147,14 +140,6 @@ for opt do
   ;;
   --cross-prefix=*) cross_prefix=`echo $opt | cut -d '=' -f 2`
   ;;
-  --sysincludepaths=*) tcc_sysincludepaths=`echo $opt | cut -d '=' -f 2`
-  ;;
-  --libpaths=*) tcc_libpaths=`echo $opt | cut -d '=' -f 2`
-  ;;
-  --crtprefix=*) tcc_crtprefix=`echo $opt | cut -d '=' -f 2`
-  ;;
-  --elfinterp=*) tcc_elfinterp=`echo $opt | cut -d '=' -f 2`
-  ;;
   --cc=*) cc=`echo $opt | cut -d '=' -f 2`
   ;;
   --extra-cflags=*) CFLAGS="${opt#--extra-cflags=}"
@@ -163,7 +148,15 @@ for opt do
   ;;
   --extra-libs=*) extralibs=${opt#--extra-libs=}
   ;;
-  --cpu=*) build_cpu=`echo $opt | cut -d '=' -f 2`
+  --sysincludepaths=*) tcc_sysincludepaths=`echo $opt | cut -d '=' -f 2`
+  ;;
+  --libpaths=*) tcc_libpaths=`echo $opt | cut -d '=' -f 2`
+  ;;
+  --crtprefix=*) tcc_crtprefix=`echo $opt | cut -d '=' -f 2`
+  ;;
+  --elfinterp=*) tcc_elfinterp=`echo $opt | cut -d '=' -f 2`
+  ;;
+  --cpu=*) cpu=`echo $opt | cut -d '=' -f 2`
   ;;
   --enable-gprof) gprof="yes"
   ;;
@@ -191,8 +184,6 @@ for opt do
   ;;
   esac
 done
-
-classify_cpu "$cpu"
 
 # Checking for CFLAGS
 if test -z "$CFLAGS"; then
@@ -279,11 +270,10 @@ Advanced options (experts only):
   --cc=CC                  use C compiler CC [$cc]
   --extra-cflags=          specify compiler flags [$CFLAGS]
   --extra-ldflags=         specify linker options []
-  --cpu=CPU                CPU [$cpu]
   --strip-binaries         strip symbol tables from resulting binaries
   --disable-static         make libtcc.so instead of libtcc.a
   --disable-rpath          disable use of -rpath with the above
-  --with-libgcc            use libgcc_s.so.1 instead of libtcc1.a in dynamic link
+  --with-libgcc            use /lib/libgcc_s.so.1 instead of libtcc.a
   --enable-mingw32         build windows version on linux with mingw32
   --enable-cygwin          build windows version on windows with cygwin
   --enable-cross           build cross compilers
@@ -314,7 +304,7 @@ if test -z "$cross_prefix" ; then
     if test "$mingw32" = "no" ; then
       triplet="$($CONFTEST triplet)"
       if test -f "/usr/lib/$triplet/crti.o" ; then
-        tcc_lddir="lib"
+        tcc_lddir="lib/$triplet"
         multiarch_triplet="$triplet"
       elif test -f "/usr/lib64/crti.o" ; then
         tcc_lddir="lib64"
@@ -365,8 +355,8 @@ Doc directory       $docdir
 Target root prefix  $sysroot
 Source path      $source_path
 C compiler       $cc
-Build CPU        $cpu
 Target OS        $targetos
+CPU              $cpu
 Big Endian       $bigendian
 gprof enabled    $gprof
 cross compilers  $build_cross

@@ -27,10 +27,9 @@
 
  Author (name)              I agree (YES/NO)    Files/Features (optional)
  ------------------------------------------------------------------------------
- Daniel Glöckner            NO                  arm-gen.c
- Daniel Glöckner            YES                 not arm-gen.c
+ Daniel Glöckner            ?                   arm-gen.c
  Fabrice Bellard            YES                 original author
- Frédéric Féret             YES                 x86 64/16 bit asm
+ Frédéric Feret             ?                   x86 64/16 bit asm
  grischka                   YES                 tccpe.c
  Shinichiro Hamaji          YES                 x86_64-gen.c
  Thomas Preud'homme         YES                 arm-gen.c

@@ -27,7 +27,7 @@
 #define DBL_MAX_10_EXP 308
 
 /* horrible intel long double */
-#if defined __i386__ || defined __x86_64__
+#ifdef __i386__
 
 #define LDBL_MANT_DIG 64
 #define LDBL_DIG 18

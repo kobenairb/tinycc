@@ -69,7 +69,8 @@ static void help(void)
            "  -nostdlib   do not link with standard crt and libraries\n"
            "  -Bdir       use 'dir' as tcc internal library and include path\n"
            "  -MD         generate target dependencies for make\n"
-           "  -MF depfile put generated dependencies here\n");
+           "  -MF depfile put generated dependencies here\n"
+           "  -norunsrc   Do not compile the file which is the first argument after -run.\n");
 }
 
 /* re-execute the i386/x86_64 cross-compilers with tcc -m32/-m64: */
@@ -78,7 +79,7 @@ static void help(void)
 #include <process.h>
 static int execvp_win32(const char *prog, char **argv)
 {
-    int ret = spawnvp(P_NOWAIT, prog, (const char *const *) argv);
+    int ret = spawnvp(P_NOWAIT, prog, (char const *const *) argv);
     if (-1 == ret)
         return ret;
     cwait(&ret, ret, WAIT_CHILD);
@@ -228,7 +229,7 @@ static void display_info(TCCState *s, int what)
         print_paths("crt", s->crt_paths, s->nb_crt_paths);
         print_paths("libraries", s->library_paths, s->nb_library_paths);
         print_paths("include", s->sysinclude_paths, s->nb_sysinclude_paths);
-        printf("elfinterp:\n  %s\n", DEFAULT_ELFINTERP(s));
+        printf("elfinterp:\n  %s\n", CONFIG_TCC_ELFINTERP);
         break;
     }
 }

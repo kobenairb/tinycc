@@ -22,7 +22,7 @@
 #include <stdarg.h>
 #include <string.h>
 #if !defined(__FreeBSD__) && !defined(__FreeBSD_kernel__) && !defined(__DragonFly__) \
-    && !defined(__OpenBSD__) && !defined(__NetBSD__)
+    && !defined(__OpenBSD__)
 #include <malloc.h>
 #endif
 #if !defined(_WIN32)
@@ -39,9 +39,9 @@
 #define CONFIG_TCC_MALLOC_HOOKS
 #define HAVE_MEMALIGN
 
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)                  \
-    || defined(__dietlibc__) || defined(__UCLIBC__) || defined(__OpenBSD__) || defined(__NetBSD__) \
-    || defined(_WIN32) || defined(TCC_UCLIBC)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)              \
+    || defined(__dietlibc__) || defined(__UCLIBC__) || defined(__OpenBSD__) || defined(_WIN32) \
+    || defined(TCC_UCLIBC)
 #warning Bound checking does not support malloc (etc.) in this environment.
 #undef CONFIG_TCC_MALLOC_HOOKS
 #undef HAVE_MEMALIGN
@@ -417,14 +417,6 @@ void __bound_init(void)
     }
 }
 
-void __bound_main_arg(void **p)
-{
-    void *start = p;
-    while (*p++)
-        ;
-    __bound_new_region(start, (void *) p - start);
-}
-
 void __bound_exit(void)
 {
     restore_malloc_hooks();
@@ -628,7 +620,7 @@ int __bound_delete_region(void *p)
 }
 
 /* return the size of the region starting at p, or EMPTY_SIZE if non
-   existent region. */
+   existant region. */
 static unsigned long get_region_size(void *p)
 {
     unsigned long addr = (unsigned long) p;

@@ -55,27 +55,18 @@
 #ifndef CONFIG_TCC_STATIC
 #include <dlfcn.h>
 #endif
-/* XXX: need to define this to use them in non ISOC99 context */
-extern float strtof(const char *__nptr, char **__endptr);
-extern long double strtold(const char *__nptr, char **__endptr);
-#else /* on _WIN32: */
+#else
 #include <windows.h>
 #include <sys/timeb.h>
 #include <io.h>     /* open, close etc. */
 #include <direct.h> /* getcwd */
 #ifdef __GNUC__
 #include <stdint.h>
+#else
+typedef UINT_PTR uintptr_t;
 #endif
 #define inline __inline
 #define inp next_inp
-#define snprintf _snprintf
-#define vsnprintf _vsnprintf
-#ifndef __GNUC__
-#define strtold (long double) strtod
-#define strtof (float) strtod
-#define strtoll _strtoi64
-#define strtoull _strtoui64
-#endif
 #ifdef LIBTCC_AS_DLL
 #define LIBTCCAPI __declspec(dllexport)
 #define PUB_FUNC LIBTCCAPI
@@ -86,30 +77,6 @@ extern long double strtold(const char *__nptr, char **__endptr);
 
 #ifndef O_BINARY
 #define O_BINARY 0
-#endif
-
-#ifdef __GNUC__
-#define NORETURN __attribute__((noreturn))
-#elif defined _MSC_VER
-#define NORETURN __declspec(noreturn)
-#else
-#define NORETURN
-#endif
-
-#ifdef _WIN32
-#define IS_DIRSEP(c) (c == '/' || c == '\\')
-#define IS_ABSPATH(p) (IS_DIRSEP(p[0]) || (p[0] && p[1] == ':' && IS_DIRSEP(p[2])))
-#define PATHCMP stricmp
-#else
-#define IS_DIRSEP(c) (c == '/')
-#define IS_ABSPATH(p) IS_DIRSEP(p[0])
-#define PATHCMP strcmp
-#endif
-
-#ifdef TCC_TARGET_PE
-#define PATHSEP ';'
-#else
-#define PATHSEP ':'
 #endif
 
 #include "elf.h"
@@ -161,7 +128,7 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #endif
 
 #if !defined(TCC_UCLIBC) && !defined(TCC_TARGET_ARM) && !defined(TCC_TARGET_C67) \
-    && !defined(TCC_TARGET_X86_64) && !defined(CONFIG_USE_LIBGCC)
+    && !defined(TCC_TARGET_X86_64)
 #define CONFIG_TCC_BCHECK /* enable bound checking code */
 #endif
 
@@ -202,17 +169,9 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #define CONFIG_LDDIR "lib"
 #endif
 
-#ifdef CONFIG_MULTIARCHDIR
-#define USE_MUADIR(s) s "/" CONFIG_MULTIARCHDIR
-#define ALSO_MUADIR(s) s "/" CONFIG_MULTIARCHDIR ":" s
-#else
-#define USE_MUADIR(s) s
-#define ALSO_MUADIR(s) s
-#endif
-
 /* path to find crt1.o, crti.o and crtn.o */
 #ifndef CONFIG_TCC_CRTPREFIX
-#define CONFIG_TCC_CRTPREFIX USE_MUADIR(CONFIG_SYSROOT "/usr/" CONFIG_LDDIR)
+#define CONFIG_TCC_CRTPREFIX CONFIG_SYSROOT "/usr/" CONFIG_LDDIR
 #endif
 
 /* Below: {B} is substituted by CONFIG_TCCDIR (rsp. -B option) */
@@ -221,23 +180,30 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #ifndef CONFIG_TCC_SYSINCLUDEPATHS
 #ifdef TCC_TARGET_PE
 #define CONFIG_TCC_SYSINCLUDEPATHS "{B}/include;{B}/include/winapi"
+#elif defined CONFIG_MULTIARCHDIR
+#define CONFIG_TCC_SYSINCLUDEPATHS                                                                 \
+    CONFIG_SYSROOT "/usr/local/include"                                                            \
+                   ":" CONFIG_SYSROOT "/usr/local/include/" CONFIG_MULTIARCHDIR ":" CONFIG_SYSROOT \
+                   "/usr/include"                                                                  \
+                   ":" CONFIG_SYSROOT "/usr/include/" CONFIG_MULTIARCHDIR ":"                      \
+                   "{B}/include"
 #else
-#define CONFIG_TCC_SYSINCLUDEPATHS                     \
-    ALSO_MUADIR(CONFIG_SYSROOT "/usr/local/include")   \
-    ":" ALSO_MUADIR(CONFIG_SYSROOT "/usr/include") ":" \
-                                                   "{B}/include"
+#define CONFIG_TCC_SYSINCLUDEPATHS                   \
+    CONFIG_SYSROOT "/usr/local/include"              \
+                   ":" CONFIG_SYSROOT "/usr/include" \
+                   ":"                               \
+                   "{B}/include"
 #endif
 #endif
 
 /* library search paths */
 #ifndef CONFIG_TCC_LIBPATHS
 #ifdef TCC_TARGET_PE
-#define CONFIG_TCC_LIBPATHS "{B}/lib"
+#define CONFIG_TCC_LIBPATHS "{B}/lib;{B}"
 #else
-#define CONFIG_TCC_LIBPATHS                                                         \
-    ALSO_MUADIR(CONFIG_SYSROOT "/usr/" CONFIG_LDDIR)                                \
-    ":" ALSO_MUADIR(CONFIG_SYSROOT "/" CONFIG_LDDIR) ":" ALSO_MUADIR(CONFIG_SYSROOT \
-                                                                     "/usr/local/" CONFIG_LDDIR)
+#define CONFIG_TCC_LIBPATHS                                                                    \
+    CONFIG_SYSROOT "/usr/" CONFIG_LDDIR ":" CONFIG_SYSROOT "/" CONFIG_LDDIR ":" CONFIG_SYSROOT \
+                   "/usr/local/" CONFIG_LDDIR
 #endif
 #endif
 
@@ -251,30 +217,25 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #else
 #define CONFIG_TCC_ELFINTERP "/lib/ld.so.1"
 #endif
-#elif defined __DragonFly__
-#define CONFIG_TCC_ELFINTERP "/usr/libexec/ld-elf.so.2"
 #elif defined __GNU__
 #define CONFIG_TCC_ELFINTERP "/lib/ld.so"
+#elif defined TCC_ARM_HARDFLOAT
+#define CONFIG_TCC_ELFINTERP "/lib/ld-linux-armhf.so.3"
+#elif defined TCC_ARM_EABI
+#define CONFIG_TCC_ELFINTERP "/lib/ld-linux.so.3"
 #elif defined(TCC_TARGET_X86_64)
 #define CONFIG_TCC_ELFINTERP "/lib64/ld-linux-x86-64.so.2"
 #elif defined(TCC_UCLIBC)
 #define CONFIG_TCC_ELFINTERP "/lib/ld-uClibc.so.0"
 #elif defined(TCC_TARGET_PE)
 #define CONFIG_TCC_ELFINTERP "-"
-#elif !defined(TCC_ARM_EABI)
+#else
 #define CONFIG_TCC_ELFINTERP "/lib/ld-linux.so.2"
 #endif
 #endif
 
-/* var elf_interp dans *-gen.c */
-#ifdef CONFIG_TCC_ELFINTERP
-#define DEFAULT_ELFINTERP(s) CONFIG_TCC_ELFINTERP
-#else
-#define DEFAULT_ELFINTERP(s) default_elfinterp(s)
-#endif
-
 /* library to use with CONFIG_USE_LIBGCC instead of libtcc1.a */
-#define TCC_LIBGCC USE_MUADIR(CONFIG_SYSROOT "/" CONFIG_LDDIR) "/libgcc_s.so.1"
+#define TCC_LIBGCC CONFIG_SYSROOT "/" CONFIG_LDDIR "/libgcc_s.so.1"
 
 /* -------------------------------------------- */
 /* include the target specific definitions */
@@ -352,7 +313,7 @@ typedef union CValue {
     long long ll;
     unsigned long long ull;
     struct CString *cstr;
-    addr_t ptr_offset;
+    void *ptr;
     int tab[LDOUBLE_SIZE / 4];
 } CValue;
 
@@ -367,32 +328,12 @@ typedef struct SValue
     struct Sym *sym;   /* symbol, if (VT_SYM | VT_CONST) */
 } SValue;
 
-struct Attribute
-{
-    unsigned func_call : 3, /* calling convention (0..5), see below */
-        aligned : 5,        /* alignement (0..16) */
-        packed : 1, func_export : 1, func_import : 1, func_args : 5, func_proto : 1, mode : 4,
-        weak : 1, visibility : 2,
-        fill : 8; // 8 bits left to fit well in union below
-};
-
-/* GNUC attribute definition */
-typedef struct AttributeDef
-{
-    struct Attribute a;
-    struct Section *section;
-    int alias_target; /* token */
-} AttributeDef;
-
 /* symbol management */
 typedef struct Sym
 {
     int v;           /* symbol token */
     char *asm_label; /* associated asm label */
-    union {
-        long r; /* associated register */
-        struct Attribute a;
-    };
+    long r;          /* associated register */
     union {
         long c; /* associated number */
         int *d; /* define token stream */
@@ -444,6 +385,26 @@ typedef struct DLLReference
     void *handle;
     char name[1];
 } DLLReference;
+
+/* GNUC attribute definition */
+typedef struct AttributeDef
+{
+    unsigned func_call : 3, /* calling convention (0..5), see below */
+        aligned : 5,        /* alignement (0..16) */
+        packed : 1, func_export : 1, func_import : 1, func_args : 5, mode : 4, weak : 1, fill : 11;
+    struct Section *section;
+    int alias_target; /* token */
+} AttributeDef;
+
+/* gr: wrappers for casting sym->r for other purposes */
+#define FUNC_CALL(r) (((AttributeDef *) &(r))->func_call)
+#define FUNC_EXPORT(r) (((AttributeDef *) &(r))->func_export)
+#define FUNC_IMPORT(r) (((AttributeDef *) &(r))->func_import)
+#define FUNC_ARGS(r) (((AttributeDef *) &(r))->func_args)
+#define FUNC_ALIGN(r) (((AttributeDef *) &(r))->aligned)
+#define FUNC_PACKED(r) (((AttributeDef *) &(r))->packed)
+#define ATTR_MODE(r) (((AttributeDef *) &(r))->mode)
+#define INT_ATTR(ad) (*(int *) (ad))
 
 /* -------------------------------------------------- */
 
@@ -569,7 +530,6 @@ typedef struct ASMOperand
 struct sym_attr
 {
     unsigned long got_offset;
-    unsigned long plt_offset;
 #ifdef TCC_TARGET_ARM
     unsigned char plt_thumb_stub : 1;
 #endif
@@ -611,9 +571,6 @@ struct TCCState
 #ifdef CONFIG_TCC_BCHECK
     /* compile with built-in memory and bounds checker */
     int do_bounds_check;
-#endif
-#ifdef TCC_TARGET_ARM
-    enum float_abi float_abi; /* float ABI of the generated code*/
 #endif
 
     addr_t text_addr; /* address of text section */
@@ -719,12 +676,17 @@ struct TCCState
 #endif
 
 #ifdef TCC_IS_NATIVE
-    const char *runtime_main;
     /* for tcc_relocate */
     void *runtime_mem;
 #ifdef HAVE_SELINUX
     void *write_mem;
     unsigned long mem_size;
+#endif
+#if !defined TCC_TARGET_PE && (defined TCC_TARGET_X86_64 || defined TCC_TARGET_ARM)
+    /* write PLT and GOT here */
+    char *runtime_plt_and_got;
+    unsigned runtime_plt_and_got_offset;
+#define TCC_HAS_RUNTIME_PLTGOT
 #endif
 #endif
 
@@ -791,7 +753,7 @@ struct TCCState
 #define VT_BITFIELD 0x0040 /* bitfield modifier */
 #define VT_CONSTANT 0x0800 /* const modifier */
 #define VT_VOLATILE 0x1000 /* volatile modifier */
-#define VT_DEFSIGN 0x2000  /* signed type */
+#define VT_SIGNED 0x2000   /* signed type */
 #define VT_VLA 0x00020000  /* VLA type (also has VT_PTR and VT_ARRAY) */
 
 /* storage */
@@ -802,20 +764,12 @@ struct TCCState
 #define VT_IMPORT 0x00004000  /* win32: extern data imported from dll */
 #define VT_EXPORT 0x00008000  /* win32: data exported from dll */
 #define VT_WEAK 0x00010000    /* weak symbol */
-#define VT_TLS 0x00040000     /* thread-local storage */
-#define VT_VIS_SHIFT \
-    19                /* shift for symbol visibility, overlapping
-                  bitfield values, because bitfields never
-                  have linkage and hence never have
-                  visibility.  */
-#define VT_VIS_SIZE 2 /* We have four visibilities.  */
-#define VT_VIS_MASK (((1 << VT_VIS_SIZE) - 1) << VT_VIS_SHIFT)
 
-#define VT_STRUCT_SHIFT 19 /* shift for bitfield shift values (max: 32 - 2*6) */
+#define VT_STRUCT_SHIFT 18 /* shift for bitfield shift values (max: 32 - 2*6) */
 
 /* type mask (except storage) */
 #define VT_STORAGE \
-    (VT_EXTERN | VT_STATIC | VT_TYPEDEF | VT_INLINE | VT_IMPORT | VT_EXPORT | VT_WEAK | VT_VIS_MASK)
+    (VT_EXTERN | VT_STATIC | VT_TYPEDEF | VT_INLINE | VT_IMPORT | VT_EXPORT | VT_WEAK)
 #define VT_TYPE (~(VT_STORAGE))
 
 /* token values */
@@ -836,39 +790,35 @@ struct TCCState
 
 #define TOK_LAND 0xa0
 #define TOK_LOR 0xa1
+
 #define TOK_DEC 0xa2
 #define TOK_MID 0xa3 /* inc/dec, to void constant */
 #define TOK_INC 0xa4
-#define TOK_UDIV 0xb0 /* unsigned division */
-#define TOK_UMOD 0xb1 /* unsigned modulo */
-#define TOK_PDIV 0xb2 /* fast division with undefined rounding for pointers */
-
-/* tokens that carry values (in additional token string space / tokc) --> */
-#define TOK_CCHAR 0xb3 /* char constant in tokc */
-#define TOK_LCHAR 0xb4
-#define TOK_CINT 0xb5    /* number in tokc */
-#define TOK_CUINT 0xb6   /* unsigned int constant */
-#define TOK_CLLONG 0xb7  /* long long constant */
-#define TOK_CULLONG 0xb8 /* unsigned long long constant */
-#define TOK_STR 0xb9     /* pointer to string in tokc */
-#define TOK_LSTR 0xba
-#define TOK_CFLOAT 0xbb   /* float constant */
-#define TOK_CDOUBLE 0xbc  /* double constant */
-#define TOK_CLDOUBLE 0xbd /* long double constant */
-#define TOK_PPNUM 0xbe    /* preprocessor number */
-#define TOK_LINENUM 0xbf  /* line number info */
-/* <-- */
-
-#define TOK_TWOSHARPS 0xc0 /* ## preprocessing token */
-#define TOK_PLCHLDR 0xc1   /* placeholder token as defined in C99 */
-#define TOK_UMULL 0xc2     /* unsigned 32x32 -> 64 mul */
-#define TOK_ADDC1 0xc3     /* add with carry generation */
-#define TOK_ADDC2 0xc4     /* add with carry use */
-#define TOK_SUBC1 0xc5     /* add with carry generation */
-#define TOK_SUBC2 0xc6     /* add with carry use */
+#define TOK_UDIV 0xb0      /* unsigned division */
+#define TOK_UMOD 0xb1      /* unsigned modulo */
+#define TOK_PDIV 0xb2      /* fast division with undefined rounding for pointers */
+#define TOK_CINT 0xb3      /* number in tokc */
+#define TOK_CCHAR 0xb4     /* char constant in tokc */
+#define TOK_STR 0xb5       /* pointer to string in tokc */
+#define TOK_TWOSHARPS 0xb6 /* ## preprocessing token */
+#define TOK_LCHAR 0xb7
+#define TOK_LSTR 0xb8
+#define TOK_CFLOAT 0xb9   /* float constant */
+#define TOK_LINENUM 0xba  /* line number info */
+#define TOK_CDOUBLE 0xc0  /* double constant */
+#define TOK_CLDOUBLE 0xc1 /* long double constant */
+#define TOK_UMULL 0xc2    /* unsigned 32x32 -> 64 mul */
+#define TOK_ADDC1 0xc3    /* add with carry generation */
+#define TOK_ADDC2 0xc4    /* add with carry use */
+#define TOK_SUBC1 0xc5    /* add with carry generation */
+#define TOK_SUBC2 0xc6    /* add with carry use */
+#define TOK_CUINT 0xc8    /* unsigned int constant */
+#define TOK_CLLONG 0xc9   /* long long constant */
+#define TOK_CULLONG 0xca  /* unsigned long long constant */
 #define TOK_ARROW 0xcb
 #define TOK_DOTS 0xcc    /* three dots */
 #define TOK_SHR 0xcd     /* unsigned shift right */
+#define TOK_PPNUM 0xce   /* preprocessor number */
 #define TOK_NOSUBST 0xcf /* means following token has already been pp'd */
 
 #define TOK_SHL 0x01 /* shift left */
@@ -992,6 +942,37 @@ enum tcc_token {
 
 #define TOK_UIDENT TOK_DEFINE
 
+#ifdef _WIN32
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#ifndef __GNUC__
+#define strtold (long double) strtod
+#define strtof (float) strtod
+#define strtoll _strtoi64
+#define strtoull _strtoui64
+#endif
+#else
+/* XXX: need to define this to use them in non ISOC99 context */
+extern float strtof(const char *__nptr, char **__endptr);
+extern long double strtold(const char *__nptr, char **__endptr);
+#endif
+
+#ifdef _WIN32
+#define IS_DIRSEP(c) (c == '/' || c == '\\')
+#define IS_ABSPATH(p) (IS_DIRSEP(p[0]) || (p[0] && p[1] == ':' && IS_DIRSEP(p[2])))
+#define PATHCMP stricmp
+#else
+#define IS_DIRSEP(c) (c == '/')
+#define IS_ABSPATH(p) IS_DIRSEP(p[0])
+#define PATHCMP strcmp
+#endif
+
+#ifdef TCC_TARGET_PE
+#define PATHSEP ';'
+#else
+#define PATHSEP ':'
+#endif
+
 /* space exlcuding newline */
 static inline int is_space(int ch)
 {
@@ -1068,7 +1049,7 @@ PUB_FUNC char *tcc_strdup(const char *str);
 #define strdup(s) use_tcc_strdup(s)
 PUB_FUNC void tcc_memstats(void);
 PUB_FUNC void tcc_error_noabort(const char *fmt, ...);
-PUB_FUNC NORETURN void tcc_error(const char *fmt, ...);
+PUB_FUNC void tcc_error(const char *fmt, ...);
 PUB_FUNC void tcc_warning(const char *fmt, ...);
 
 /* other utilities */
@@ -1168,7 +1149,7 @@ ST_FUNC void preprocess_init(TCCState *s1);
 ST_FUNC void preprocess_new(void);
 ST_FUNC int tcc_preprocess(TCCState *s1);
 ST_FUNC void skip(int c);
-ST_FUNC NORETURN void expect(const char *msg);
+ST_FUNC void expect(const char *msg);
 
 /* ------------ tccgen.c ------------ */
 
@@ -1207,7 +1188,6 @@ ST_DATA int nocode_wanted; /* true if no code generation wanted for an expressio
 ST_DATA int
     global_expr; /* true if compound literals must be allocated globally (used during initializers parsing */
 ST_DATA CType func_vt; /* current function return type (used by return instruction) */
-ST_DATA int func_var;  /* true if current function is variadic */
 ST_DATA int func_vc;
 ST_DATA int last_line_num, last_ind, func_ind; /* debug last line number and pc */
 ST_DATA char *funcname;
@@ -1304,7 +1284,6 @@ ST_FUNC void put_stabd(int type, int other, int desc);
 ST_FUNC void relocate_common_syms(void);
 ST_FUNC void relocate_syms(TCCState *s1, int do_resolve);
 ST_FUNC void relocate_section(TCCState *s1, Section *s);
-ST_FUNC void relocate_plt(TCCState *s1);
 
 ST_FUNC void tcc_add_linker_symbols(TCCState *s1);
 ST_FUNC int tcc_load_object_file(TCCState *s1, int fd, unsigned long file_offset);
@@ -1315,7 +1294,7 @@ ST_FUNC void build_got_entries(TCCState *s1);
 ST_FUNC void tcc_add_runtime(TCCState *s1);
 
 ST_FUNC addr_t get_elf_sym_addr(TCCState *s, const char *name, int err);
-#if defined TCC_IS_NATIVE || defined TCC_TARGET_PE
+#ifdef TCC_IS_NATIVE
 ST_FUNC void *tcc_get_symbol_err(TCCState *s, const char *name);
 #endif
 
@@ -1336,7 +1315,7 @@ ST_FUNC void gsym_addr(int t, int a);
 ST_FUNC void gsym(int t);
 ST_FUNC void load(int r, SValue *sv);
 ST_FUNC void store(int r, SValue *v);
-ST_FUNC int gfunc_sret(CType *vt, int variadic, CType *ret, int *align);
+ST_FUNC int gfunc_sret(CType *vt, CType *ret, int *align);
 ST_FUNC void gfunc_call(int nb_args);
 ST_FUNC void gfunc_prolog(CType *func_type);
 ST_FUNC void gfunc_epilog(void);
@@ -1381,10 +1360,7 @@ ST_FUNC void gen_opl(int op);
 
 /* ------------ arm-gen.c ------------ */
 #ifdef TCC_TARGET_ARM
-#ifdef TCC_ARM_EABI
-ST_FUNC char *default_elfinterp(struct TCCState *s);
-#endif
-ST_FUNC void arm_init(struct TCCState *s);
+ST_FUNC void arm_init_types(void);
 ST_FUNC uint32_t encbranch(int pos, int addr, int fail);
 ST_FUNC void gen_cvt_itof1(int t);
 #endif
@@ -1438,10 +1414,6 @@ ST_FUNC SValue *pe_getimport(SValue *sv, SValue *v2);
 #ifdef TCC_TARGET_X86_64
 ST_FUNC void pe_add_unwind_data(unsigned start, unsigned end, unsigned stack);
 #endif
-/* symbol properties stored in Elf32_Sym->st_other */
-#define ST_PE_EXPORT 0x10
-#define ST_PE_IMPORT 0x20
-#define ST_PE_STDCALL 0x40
 #endif
 
 /* ------------ tccrun.c ----------------- */

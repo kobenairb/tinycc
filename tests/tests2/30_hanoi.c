@@ -70,7 +70,7 @@ void PrintAll()
 /* Returns the value moved (not used.) */
 int Move(int *source, int *dest)
 {
-    int i = 0, j = 0;
+    int i, j;
 
     while (i < N && (source[i]) == 0)
         i++;
