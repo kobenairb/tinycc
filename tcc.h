@@ -83,6 +83,14 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #define O_BINARY 0
 #endif
 
+#ifndef offsetof
+#define offsetof(type, field) ((size_t) & ((type *) 0)->field)
+#endif
+
+#ifndef countof
+#define countof(tab) (sizeof(tab) / sizeof((tab)[0]))
+#endif
+
 #ifdef _MSC_VER
 #define NORETURN __declspec(noreturn)
 #define ALIGNED(x) __declspec(align(x))
@@ -99,12 +107,6 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #define IS_DIRSEP(c) (c == '/')
 #define IS_ABSPATH(p) IS_DIRSEP(p[0])
 #define PATHCMP strcmp
-#endif
-
-#ifdef TCC_TARGET_PE
-#define PATHSEP ';'
-#else
-#define PATHSEP ':'
 #endif
 
 /* -------------------------------------------- */
@@ -130,12 +132,20 @@ extern long double strtold(const char *__nptr, char **__endptr);
 /* default target is I386 */
 #if !defined(TCC_TARGET_I386) && !defined(TCC_TARGET_ARM) && !defined(TCC_TARGET_ARM64) \
     && !defined(TCC_TARGET_C67) && !defined(TCC_TARGET_X86_64)
+#if defined __x86_64__ || defined _AMD64_
+#define TCC_TARGET_X86_64
+#elif defined __arm__
+#define TCC_TARGET_ARM
+#define TCC_ARM_EABI
+#define TCC_ARM_HARDFLOAT
+#elif defined __aarch64__
+#define TCC_TARGET_ARM64
+#else
 #define TCC_TARGET_I386
 #endif
-
-/* object format selection */
-#if defined(TCC_TARGET_C67)
-#define TCC_TARGET_COFF
+#ifdef _WIN32
+#define TCC_TARGET_PE 1
+#endif
 #endif
 
 /* only native compiler supports -run */
@@ -165,7 +175,7 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #define CONFIG_SYSROOT ""
 #endif
 #ifndef CONFIG_TCCDIR
-#define CONFIG_TCCDIR "."
+#define CONFIG_TCCDIR "/usr/local/lib/tcc"
 #endif
 #ifndef CONFIG_LDDIR
 #define CONFIG_LDDIR "lib"
@@ -267,6 +277,12 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #define TCC_LIBGCC USE_TRIPLET(CONFIG_SYSROOT "/" CONFIG_LDDIR) "/libgcc_s.so.1"
 #endif
 
+#ifdef TCC_TARGET_PE
+#define PATHSEP ';'
+#else
+#define PATHSEP ':'
+#endif
+
 /* -------------------------------------------- */
 
 #include "libtcc.h"
@@ -279,7 +295,11 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #define PUB_FUNC
 #endif
 
-#ifdef ONE_SOURCE
+#ifndef ONE_SOURCE
+#define ONE_SOURCE 1
+#endif
+
+#if ONE_SOURCE
 #define ST_INLN static inline
 #define ST_FUNC static
 #define ST_DATA static
@@ -315,6 +335,7 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #include "arm64-link.c"
 #endif
 #ifdef TCC_TARGET_C67
+#define TCC_TARGET_COFF
 #include "coff.h"
 #include "c67-gen.c"
 #include "c67-link.c"
@@ -978,14 +999,6 @@ struct filespec
 #define TOK_A_OR 0xfc
 #define TOK_A_SHL 0x81
 #define TOK_A_SAR 0x82
-
-#ifndef offsetof
-#define offsetof(type, field) ((size_t) & ((type *) 0)->field)
-#endif
-
-#ifndef countof
-#define countof(tab) (sizeof(tab) / sizeof((tab)[0]))
-#endif
 
 #define TOK_EOF (-1)    /* end of file */
 #define TOK_LINEFEED 10 /* line feed */
@@ -1700,7 +1713,7 @@ ST_FUNC void gen_makedeps(TCCState *s, const char *target, const char *filename)
 
 /********************************************************/
 #undef ST_DATA
-#ifdef ONE_SOURCE
+#if ONE_SOURCE
 #define ST_DATA static
 #else
 #define ST_DATA
