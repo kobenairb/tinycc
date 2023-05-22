@@ -268,7 +268,7 @@ ST_FUNC int add_elf_sym(
 
 /* put relocation */
 ST_FUNC void put_elf_reloca(
-    Section *symtab, Section *s, unsigned long offset, int type, int symbol, unsigned long addend)
+    Section *symtab, Section *s, unsigned long offset, int type, int symbol, addr_t addend)
 {
     char buf[256];
     Section *sr;
