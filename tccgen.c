@@ -78,6 +78,7 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
 static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_reg, int is_expr);
 static void decl_initializer_alloc(
     CType *type, AttributeDef *ad, int r, int has_init, int v, char *asm_label, int scope);
+static int decl0(int l, int is_for_loop_init);
 static void expr_eq(void);
 static void unary_type(CType *type);
 static int is_compatible_parameter_types(CType *type1, CType *type2);
@@ -4377,8 +4378,12 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         next();
         skip('(');
         if (tok != ';') {
-            gexpr();
-            vpop();
+            /* c99 for-loop init decl? */
+            if (!decl0(VT_LOCAL, 1)) {
+                /* no, regular for-loop init expr */
+                gexpr();
+                vpop();
+            }
         }
         skip(';');
         d = ind;
@@ -5372,7 +5377,7 @@ ST_FUNC void gen_inline_functions(void)
 }
 
 /* 'l' is VT_LOCAL or VT_CONST to define default storage type */
-ST_FUNC void decl(int l)
+static int decl0(int l, int is_for_loop_init)
 {
     int v, has_init, r;
     CType type, btype;
@@ -5381,6 +5386,8 @@ ST_FUNC void decl(int l)
 
     while (1) {
         if (!parse_btype(&btype, &ad)) {
+            if (is_for_loop_init)
+                return 0;
             /* skip redundant ';' */
             /* XXX: find more elegant solution */
             if (tok == ';') {
@@ -5589,6 +5596,8 @@ ST_FUNC void decl(int l)
                     }
                 }
                 if (tok != ',') {
+                    if (is_for_loop_init)
+                        return 1;
                     skip(';');
                     break;
                 }
@@ -5596,4 +5605,10 @@ ST_FUNC void decl(int l)
             }
         }
     }
+    return 0;
+}
+
+ST_FUNC void decl(int l)
+{
+    decl0(l, 0);
 }
