@@ -491,6 +491,8 @@ static int rt_get_caller_pc(addr_t *paddr, ucontext_t *uc, int level)
         *paddr = uc->uc_mcontext.eip;
 #elif defined(__NetBSD__)
         *paddr = uc->uc_mcontext.__gregs[_REG_EIP];
+#elif defined(__OpenBSD__)
+        *paddr = uc->sc_eip;
 #else
         *paddr = uc->uc_mcontext.gregs[REG_EIP];
 #endif
@@ -504,6 +506,8 @@ static int rt_get_caller_pc(addr_t *paddr, ucontext_t *uc, int level)
         fp = uc->uc_mcontext.ebp;
 #elif defined(__NetBSD__)
         fp = uc->uc_mcontext.__gregs[_REG_EBP];
+#elif defined(__OpenBSD__)
+        *paddr = uc->sc_ebp;
 #else
         fp = uc->uc_mcontext.gregs[REG_EBP];
 #endif
