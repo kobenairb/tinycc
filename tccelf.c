@@ -2252,7 +2252,7 @@ ST_FUNC int tcc_load_object_file(TCCState *s1, int fd, unsigned long file_offset
 {
     ElfW(Ehdr) ehdr;
     ElfW(Shdr) * shdr, *sh;
-    int size, i, j, offset, offseti, nb_syms, sym_index, ret;
+    int size, i, j, offset, offseti, nb_syms, sym_index, ret, seencompressed;
     unsigned char *strsec, *strtab;
     int *old_to_new_syms;
     char *sh_name, *name;
@@ -2288,6 +2288,7 @@ ST_FUNC int tcc_load_object_file(TCCState *s1, int fd, unsigned long file_offset
     symtab = NULL;
     strtab = NULL;
     nb_syms = 0;
+    seencompressed = 0;
     for (i = 1; i < ehdr.e_shnum; i++) {
         sh = &shdr[i];
         if (sh->sh_type == SHT_SYMTAB) {
@@ -2305,6 +2306,8 @@ ST_FUNC int tcc_load_object_file(TCCState *s1, int fd, unsigned long file_offset
             sh = &shdr[sh->sh_link];
             strtab = load_data(fd, file_offset + sh->sh_offset, sh->sh_size);
         }
+        if (sh->sh_flags & SHF_COMPRESSED)
+            seencompressed = 1;
     }
 
     /* now examine each section and try to merge its content with the
@@ -2323,6 +2326,13 @@ ST_FUNC int tcc_load_object_file(TCCState *s1, int fd, unsigned long file_offset
             sh->sh_type != SHT_NOBITS && sh->sh_type != SHT_PREINIT_ARRAY
             && sh->sh_type != SHT_INIT_ARRAY && sh->sh_type != SHT_FINI_ARRAY
             && strcmp(sh_name, ".stabstr"))
+            continue;
+        if (seencompressed
+            && (!strncmp(sh_name, ".debug_", sizeof(".debug_") - 1)
+                || (sh->sh_type == SHT_RELX
+                    && !strncmp((char *) strsec + shdr[sh->sh_info].sh_name,
+                                ".debug_",
+                                sizeof(".debug_") - 1))))
             continue;
         if (sh->sh_addralign < 1)
             sh->sh_addralign = 1;
