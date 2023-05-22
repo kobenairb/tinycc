@@ -4515,9 +4515,13 @@ static void expr_cond(void)
     SValue sv;
     CType type, type1, type2;
 
-    if (const_wanted) {
+    if (const_wanted)
         expr_lor_const();
-        if (tok == '?') {
+    else
+        expr_lor();
+    if (tok == '?') {
+        next();
+        if ((vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST) {
             CType boolean;
             int c;
             boolean.t = VT_BOOL;
@@ -4525,7 +4529,6 @@ static void expr_cond(void)
             gen_cast(&boolean);
             c = vtop->c.i;
             vpop();
-            next();
             if (tok != ':' || !gnu_ext) {
                 vpop();
                 gexpr();
@@ -4536,11 +4539,7 @@ static void expr_cond(void)
             expr_cond();
             if (c)
                 vpop();
-        }
-    } else {
-        expr_lor();
-        if (tok == '?') {
-            next();
+        } else {
             if (vtop != vstack) {
                 /* needed to avoid having different registers saved in
                    each branch */
