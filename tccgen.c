@@ -5124,6 +5124,10 @@ static void decl(int l)
                             r |= l;
                         if (has_init)
                             next();
+#ifdef TCC_TARGET_PE
+                        if (ad.func_export)
+                            type.t |= VT_EXPORT;
+#endif
                         decl_initializer_alloc(&type, &ad, r, has_init, v, l);
                     }
                 }
