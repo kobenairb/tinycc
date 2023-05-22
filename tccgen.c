@@ -875,7 +875,7 @@ ST_FUNC int gv(int rc)
 #endif
 
         r = vtop->r & VT_VALMASK;
-        if ((rc & ~RC_MASK) && (rc != RC_ST0))
+        if (rc & ~RC_MASK)
             rc2 = ex_rc;
         else
             rc2 = (rc & RC_FLOAT) ? RC_FLOAT : RC_INT;
@@ -2666,7 +2666,6 @@ ST_FUNC void vstore(void)
                 vtop -= 2;
             } else {
                 size = type_size(&vtop->type, &align);
-#ifndef TCC_TARGET_X86_64
                 /* destination */
                 vswap();
                 vtop->type.t = VT_PTR;
@@ -2688,22 +2687,8 @@ ST_FUNC void vstore(void)
                 vtop->type.t = VT_PTR;
                 gaddrof();
                 /* type size */
-                vpushs(size);
+                vpushi(size);
                 gfunc_call(3);
-#else
-                /* destination */
-                vswap();
-                vtop->type.t = VT_PTR;
-                gaddrof();
-                /* source */
-                vpushv(vtop - 1);
-                vtop->type.t = VT_PTR;
-                gaddrof();
-                /* size */
-                vpushs(size);
-                struct_copy(&vtop[-2], &vtop[-1], &vtop[0]);
-                vtop -= 3;
-#endif
             }
         } else {
             vswap();
@@ -5350,7 +5335,6 @@ static void init_putz(CType *t, Section *sec, unsigned long c, int size)
     if (sec) {
         /* nothing to do because globals are already set to zero */
     } else {
-#ifndef TCC_TARGET_X86_64
         vpush_global_sym(&func_old_type, TOK_memset);
         vseti(VT_LOCAL, c);
 #ifdef TCC_TARGET_ARM
@@ -5361,11 +5345,6 @@ static void init_putz(CType *t, Section *sec, unsigned long c, int size)
         vpushs(size);
 #endif
         gfunc_call(3);
-#else
-        vseti(VT_LOCAL, c);
-        gen_putz(vtop, size);
-        vtop--;
-#endif
     }
 }
 
