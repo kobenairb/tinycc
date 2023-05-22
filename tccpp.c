@@ -2664,7 +2664,8 @@ redo_no_start:
             cstr_ccat(&tokcstr, c);
             PEEKC(c, p);
             if (!((isidnum_table[c - CH_EOF] & (IS_ID | IS_NUM)) || c == '.'
-                  || ((c == '+' || c == '-') && (t == 'e' || t == 'E' || t == 'p' || t == 'P'))))
+                  || ((c == '+' || c == '-') && (t == 'e' || t == 'E' || t == 'p' || t == 'P')
+                      && !(parse_flags & PARSE_FLAG_ASM_FILE))))
                 break;
         }
         /* We add a trailing '\0' to ease parsing */
