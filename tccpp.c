@@ -78,7 +78,7 @@ static const unsigned char tok_two_chars[] =
     {'<', '=', TOK_LE,        '>', '=', TOK_GE,    '!', '=', TOK_NE,
      '&', '&', TOK_LAND,      '|', '|', TOK_LOR,   '+', '+', TOK_INC,
      '-', '-', TOK_DEC,       '=', '=', TOK_EQ,    '<', '<', TOK_SHL,
-     '>', '>', TOK_SHR,       '+', '=', TOK_A_ADD, '-', '=', TOK_A_SUB,
+     '>', '>', TOK_SAR,       '+', '=', TOK_A_ADD, '-', '=', TOK_A_SUB,
      '*', '=', TOK_A_MUL,     '/', '=', TOK_A_DIV, '%', '=', TOK_A_MOD,
      '&', '=', TOK_A_AND,     '^', '=', TOK_A_XOR, '|', '=', TOK_A_OR,
      '-', '>', TOK_ARROW,     '.', '.', 0xa8, // C++ token ?
