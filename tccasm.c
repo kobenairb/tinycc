@@ -1053,8 +1053,10 @@ ST_FUNC int find_constraint(ASMOperand *operands, int nb_operands, const char *n
     return index;
 }
 
-static void subst_asm_operands(
-    ASMOperand *operands, int nb_operands, int nb_outputs, CString *out_str, CString *in_str)
+static void subst_asm_operands(ASMOperand *operands,
+                               int nb_operands,
+                               CString *out_str,
+                               CString *in_str)
 {
     int c, index, modifier;
     const char *str;
@@ -1217,7 +1219,7 @@ ST_FUNC void asm_instr(void)
     printf("asm: \"%s\"\n", (char *) astr.data);
 #endif
     if (must_subst) {
-        subst_asm_operands(operands, nb_operands, nb_outputs, &astr1, &astr);
+        subst_asm_operands(operands, nb_operands, &astr1, &astr);
         cstr_free(&astr);
     } else {
         astr1 = astr;
