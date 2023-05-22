@@ -457,6 +457,7 @@ typedef struct Sym
 
 /* special flag, too */
 #define SECTION_ABS ((void *) 1)
+#define SECTION_COMMON ((void *) 2)
 
 typedef struct Section
 {
