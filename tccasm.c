@@ -554,6 +554,16 @@ static void asm_parse_directive(TCCState *s1)
         use_section1(s1, last_text_section);
         last_text_section = sec;
     } break;
+#ifdef TCC_TARGET_I386
+    case TOK_ASM_code16: {
+        next();
+        s1->seg_size = 16;
+    } break;
+    case TOK_ASM_code32: {
+        next();
+        s1->seg_size = 32;
+    } break;
+#endif
     default:
         error("unknown assembler directive '.%s'", get_tok_str(tok, NULL));
         break;
