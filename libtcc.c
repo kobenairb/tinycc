@@ -2293,8 +2293,6 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
         case TCC_OPTION_dumpversion:
             printf("%s\n", TCC_VERSION);
             exit(0);
-        case TCC_OPTION_s:
-            s->do_strip = 1;
             break;
         case TCC_OPTION_traditional:
             break;
@@ -2315,6 +2313,7 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
             break;
         case TCC_OPTION_pedantic:
         case TCC_OPTION_pipe:
+        case TCC_OPTION_s:
             /* ignored */
             break;
         default:
