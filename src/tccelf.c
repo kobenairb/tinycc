@@ -787,8 +787,8 @@ ST_FUNC void relocate_section(TCCState *s1, Section *s)
            if we really need a PLT slot.  */
             if (sym->st_shndx == SHN_UNDEF)
                 /* We've put the PLT slot offset into r_addend when generating
-           it, and that's what we must use as relocation value (adjusted
-           by section offset of course).  */
+               it, and that's what we must use as relocation value (adjusted
+               by section offset of course).  */
                 val = s1->plt->sh_addr + rel->r_addend;
 #ifdef DEBUG_RELOC
             printf("reloc %d @ 0x%lx: val=0x%lx name=%s\n",
@@ -916,8 +916,8 @@ ST_FUNC void relocate_section(TCCState *s1, Section *s)
 
         case R_X86_64_PLT32:
             /* We've put the PLT slot offset into r_addend when generating
-           it, and that's what we must use as relocation value (adjusted
-           by section offset of course).  */
+               it, and that's what we must use as relocation value (adjusted
+               by section offset of course).  */
             val = s1->plt->sh_addr + rel->r_addend;
             /* fallthrough.  */
 
@@ -1158,8 +1158,8 @@ static unsigned long put_got_entry(
         }
 
         /* The PLT slot refers to the relocation entry it needs
-           via offset.  The reloc entry is created below, so its
-           offset is the current data_offset.  */
+               via offset.  The reloc entry is created below, so its
+               offset is the current data_offset.  */
         relofs = s1->got->reloc ? s1->got->reloc->data_offset : 0;
         symattr->plt_offset = plt->data_offset;
         p = section_ptr_add(plt, 16);
@@ -1177,8 +1177,8 @@ static unsigned long put_got_entry(
         put32(p + 12, -(plt->data_offset));
 
         /* If this was an UNDEF symbol set the offset in the
-           dynsymtab to the PLT slot, so that PC32 relocs to it
-           can be resolved.  */
+               dynsymtab to the PLT slot, so that PC32 relocs to it
+               can be resolved.  */
         if (sym->st_shndx == SHN_UNDEF)
             offset = plt->data_offset - 16;
     }
@@ -1250,12 +1250,12 @@ static unsigned long put_got_entry(
         /* XXX This might generate multiple syms for name.  */
         index = put_elf_sym(s1->dynsym, offset, size, info, 0, sym->st_shndx, name);
         /* Create the relocation (it's against the GOT for PLT
-       and GOT relocs).  */
+           and GOT relocs).  */
         put_elf_reloc(s1->dynsym, s1->got, s1->got->data_offset, reloc_type, index);
     } else {
         /* Without .dynsym (i.e. static link or memory output) we
-       still need relocs against the generated got, so as to fill
-       the entries with the symbol values (determined later).  */
+           still need relocs against the generated got, so as to fill
+           the entries with the symbol values (determined later).  */
         put_elf_reloc(symtab_section, s1->got, s1->got->data_offset, reloc_type, sym_index);
     }
     /* And now create the GOT slot itself.  */
@@ -1402,7 +1402,7 @@ ST_FUNC void build_got_entries(TCCState *s1)
                     reloc_type = R_AARCH64_JUMP_SLOT;
                     ofs = put_got_entry(s1, reloc_type, sym->st_size, sym->st_info, sym_index);
                     /* We store the place of the generated PLT slot
-               in our addend.  */
+                       in our addend.  */
                     rel->r_addend += ofs;
                 }
                 break;
@@ -2225,9 +2225,9 @@ static int layout_sections(TCCState *s1,
             }
             if (j == 0) {
                 /* Make the first PT_LOAD segment include the program
-           headers itself (and the ELF header as well), it'll
-           come out with same memory use but will make various
-           tools like binutils strip work better.  */
+                   headers itself (and the ELF header as well), it'll
+                   come out with same memory use but will make various
+                   tools like binutils strip work better.  */
                 ph->p_offset &= ~(ph->p_align - 1);
                 ph->p_vaddr &= ~(ph->p_align - 1);
                 ph->p_paddr &= ~(ph->p_align - 1);
@@ -2704,7 +2704,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
             {
                 if (sym->st_shndx == SHN_UNDEF) {
                     /* relocate to PLT if symbol corresponds to a PLT entry,
-               but not if it's a weak symbol */
+                       but not if it's a weak symbol */
                     if (ELFW(ST_BIND)(sym->st_info) == STB_WEAK)
                         sym->st_value = 0;
                     else if (sym->st_value)

@@ -1803,18 +1803,18 @@ ST_FUNC void gen_op(int op)
 #if 0
 /* #ifdef CONFIG_TCC_BCHECK
     The main reason to removing this code:
-    #include <stdio.h>
-    int main ()
-    {
-        int v[10];
-        int i = 10;
-        int j = 9;
-        fprintf(stderr, "v+i-j  = %p\n", v+i-j);
-        fprintf(stderr, "v+(i-j)  = %p\n", v+(i-j));
-    }
+        #include <stdio.h>
+        int main ()
+        {
+            int v[10];
+            int i = 10;
+            int j = 9;
+            fprintf(stderr, "v+i-j  = %p\n", v+i-j);
+            fprintf(stderr, "v+(i-j)  = %p\n", v+(i-j));
+        }
     When this code is on. then the output looks like
-    v+i-j = 0xfffffffe
-    v+(i-j) = 0xbff84000
+        v+i-j = 0xfffffffe
+        v+(i-j) = 0xbff84000
     */
             /* if evaluating constant expression, no code should be
                generated, so no bound check */
@@ -2487,14 +2487,14 @@ static void gen_assign_cast(CType *dt)
     if (sbt == VT_VOID || dbt == VT_VOID) {
         if (sbt == VT_VOID && dbt == VT_VOID)
             ; /*
-          It is Ok if both are void
-          A test program:
-            void func1() {}
-        void func2() {
-          return func1();
-        }
-          gcc accepts this program
-          */
+              It is Ok if both are void
+              A test program:
+                void func1() {}
+                void func2() {
+                  return func1();
+                }
+              gcc accepts this program
+              */
         else
             tcc_error("cannot cast from/to void");
     }
@@ -3828,7 +3828,7 @@ tok_next:
             if (nocode_wanted)
                 tcc_error("statement expression in global scope"); */
             /* this check breaks compilation of the linux 2.4.26 with the meesage:
-           linux/include/net/tcp.h:945: error: statement expression in global scope */
+               linux/include/net/tcp.h:945: error: statement expression in global scope */
 
             /* save all registers */
             save_regs(0);
@@ -3888,8 +3888,8 @@ tok_next:
         if ((vtop->type.t & VT_BTYPE) == VT_PTR)
             tcc_error("pointer not accepted for unary plus");
         /* In order to force cast, we add zero, except for floating point
-       where we really need an noop (otherwise -0.0 will be transformed
-       into +0.0).  */
+           where we really need an noop (otherwise -0.0 will be transformed
+           into +0.0).  */
         if (!is_float(vtop->type.t)) {
             vpushi(0);
             gen_op('+');
@@ -4057,7 +4057,7 @@ tok_next:
         t = vtop->type.t & VT_BTYPE;
         if (is_float(t)) {
             /* In IEEE negate(x) isn't subtract(0,x), but rather
-           subtract(-0, x).  */
+               subtract(-0, x).  */
             vpush(&vtop->type);
             if (t == VT_FLOAT)
                 vtop->c.f = -0.0f;
@@ -4315,7 +4315,7 @@ tok_next:
 
                 size = type_size(&s->type, &align);
                 /* We're writing whole regs often, make sure there's enough
-           space.  Assume register size is power of 2.  */
+                   space.  Assume register size is power of 2.  */
                 if (regsize > align)
                     align = regsize;
                 loc = (loc - size) & -align;
@@ -4611,13 +4611,13 @@ static void expr_cond(void)
                     type.t |= VT_UNSIGNED;
             } else if (bt1 == VT_PTR || bt2 == VT_PTR) {
                 /* If one is a null ptr constant the result type
-           is the other.  */
+                   is the other.  */
                 if (is_null_pointer(vtop))
                     type = type1;
                 else if (is_null_pointer(&sv))
                     type = type2;
                 /* XXX: test pointer compatibility, C99 has more elaborate
-           rules here.  */
+                   rules here.  */
                 else
                     type = type1;
             } else if (bt1 == VT_FUNC || bt2 == VT_FUNC) {
@@ -4885,11 +4885,11 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
                triggered by gcc.c-torture/execute/20000917-1.c */
             Sym *p;
             switch (vtop->type.t & VT_BTYPE) {
-            /* case VT_PTR: */
-            /* this breaks a compilation of the linux kernel v2.4.26 */
-            /* pmd_t *new = ({ __asm__ __volatile__("ud2\n") ; ((pmd_t *)1); }); */
-            /* Look a commit a80acab: Display error on statement expressions with complex return type */
-            /* A pointer is not a complex return type */
+                /* case VT_PTR: */
+                /* this breaks a compilation of the linux kernel v2.4.26 */
+                /* pmd_t *new = ({ __asm__ __volatile__("ud2\n") ; ((pmd_t *)1); }); */
+                /* Look a commit a80acab: Display error on statement expressions with complex return type */
+                /* A pointer is not a complex return type */
             case VT_STRUCT:
             case VT_ENUM:
             case VT_FUNC:
@@ -5619,9 +5619,9 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
             next();
             if (tcc_state->old_struct_init_code) {
                 /* an old version of struct initialization.
-           It have a problems. But with a new version
-           linux 2.4.26 can't load ramdisk.
-         */
+                   It have a problems. But with a new version
+                   linux 2.4.26 can't load ramdisk.
+                 */
                 while (tok == '(') {
                     par_count++;
                     next();
@@ -5630,8 +5630,8 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
                     expect("cast");
                 type_decl(&type1, &ad1, &n, TYPE_ABSTRACT);
 #if 0
-        if (!is_assignable_types(type, &type1))
-                    tcc_error("invalid type for cast");
+                if (!is_assignable_types(type, &type1))
+            tcc_error("invalid type for cast");
 #endif
                 skip(')');
             } else {
@@ -5640,8 +5640,8 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
                         expect("cast");
                     type_decl(&type1, &ad1, &n, TYPE_ABSTRACT);
 #if 0
-            if (!is_assignable_types(type, &type1))
-                    tcc_error("invalid type for cast");
+                if (!is_assignable_types(type, &type1))
+                        tcc_error("invalid type for cast");
 #endif
                     skip(')');
                 } else
@@ -5681,18 +5681,18 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
                     break;
                 if ((f_type == VT_STRUCT) && (f_size == 0)) {
                     /*
-                       Lets assume a structure of size 0 can't be a member of the union.
-                       This allow to compile the following code from a linux kernel v2.4.26
-                typedef struct { } rwlock_t;
-                struct fs_struct {
-                 int count;
-                 rwlock_t lock;
-                 int umask;
-                };
-                struct fs_struct init_fs = { { (1) }, (rwlock_t) {}, 0022, };
-            tcc-0.9.23 can succesfully compile this version of the kernel.
-            gcc don't have problems with this code too.
-                    */
+                           Lets assume a structure of size 0 can't be a member of the union.
+                           This allow to compile the following code from a linux kernel v2.4.26
+                            typedef struct { } rwlock_t;
+                            struct fs_struct {
+                             int count;
+                             rwlock_t lock;
+                             int umask;
+                            };
+                            struct fs_struct init_fs = { { (1) }, (rwlock_t) {}, 0022, };
+                        tcc-0.9.23 can succesfully compile this version of the kernel.
+                        gcc don't have problems with this code too.
+                        */
                     break;
                 }
                 /* if yes, test for bitfield shift */
@@ -6283,7 +6283,7 @@ static int decl0(int l, int is_for_loop_init)
                         type.t = (type.t & ~VT_EXTERN) | VT_STATIC;
 
                     /* If the definition has no visibility use the
-               one from prototype.  */
+                       one from prototype.  */
                     if (!(type.t & VT_VIS_MASK))
                         type.t |= sym->type.t & VT_VIS_MASK;
 
