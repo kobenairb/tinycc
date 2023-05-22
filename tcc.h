@@ -646,14 +646,6 @@ struct sym_attr
 #endif
 };
 
-typedef struct ParseArgsState
-{
-    int run;
-    int pthread;
-    int filetype;
-    CString linker_arg; /* collect -Wl options for input such as "-Wl,-rpath -Wl,<path>" */
-} ParseArgsState;
-
 #if !defined(MEM_DEBUG)
 #define tal_free(al, p) tal_free_impl(al, p)
 #define tal_realloc(al, p, size) tal_realloc_impl(&al, p, size)
@@ -870,7 +862,10 @@ struct TCCState
     int do_bench;            /* option -bench */
     int gen_deps;            /* option -MD  */
     char *deps_outfile;      /* option -MF */
-    ParseArgsState *parse_args_state;
+
+    int args_pthread;   /* -pthread option */
+    CString linker_arg; /* collect -Wl options for input such as "-Wl,-rpath -Wl,<path>" */
+    int args_ref;       /* tcc_parse_args recursive counter */
 };
 
 struct filespec
@@ -1331,8 +1326,6 @@ ST_FUNC void preprocess_delete(void);
 ST_FUNC int tcc_preprocess(TCCState *s1);
 ST_FUNC void skip(int c);
 ST_FUNC NORETURN void expect(const char *msg);
-ST_FUNC char *trimfront(char *p);
-ST_FUNC char *trimback(char *a, char *e);
 
 /* ------------ tccgen.c ------------ */
 
