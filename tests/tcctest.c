@@ -2619,6 +2619,19 @@ void getmyaddress(void)
 {
     printf("in getmyaddress\n");
 }
+
+#ifdef __LP64__
+long __pa_symbol(void)
+{
+    /* This 64bit constant was handled incorrectly, it was used as addend
+       (which can hold 64bit just fine) in connection with a symbol,
+       and TCC generates wrong code for that (displacements are 32bit only).
+       This effectively is "+ 0x80000000", and if addresses of globals
+       are below 2GB the result should be a number without high 32 bits set.  */
+    return ((long) (((unsigned long) (&rel1))) - (0xffffffff80000000UL));
+}
+#endif
+
 unsigned long theaddress = (unsigned long) getmyaddress;
 void relocation_test(void)
 {
@@ -2626,6 +2639,9 @@ void relocation_test(void)
     printf("*rel1=%d\n", *rel1);
     printf("*rel2=%d\n", *rel2);
     fptr();
+#ifdef __LP64__
+    printf("pa_symbol=0x%lx\n", __pa_symbol() >> 63);
+#endif
 }
 
 void old_style_f(a, b, c) int a, b;
@@ -3121,6 +3137,29 @@ void fancy_copy2(unsigned *in, unsigned *out)
     asm volatile("mov %0,(%1)" : : "r"(*in), "r"(out) : "memory");
 }
 
+#ifdef __x86_64__
+void clobber_r12(void)
+{
+    asm volatile("mov $1, %%r12" ::: "r12");
+}
+#endif
+
+void test_high_clobbers(void)
+{
+#ifdef __x86_64__
+    register long val asm("r12");
+    long val2;
+    /* This tests if asm clobbers correctly save/restore callee saved
+       registers if they are clobbered and if it's the high 8 x86-64
+       registers.  This is fragile for GCC as the constraints do not
+       correctly capture the data flow, but good enough for us.  */
+    asm volatile("mov $0x4542, %%r12" : "=r"(val)::"memory");
+    clobber_r12();
+    asm volatile("mov %%r12, %0" : "=r"(val2) : "r"(val) : "memory");
+    printf("asmhc: 0x%x\n", val2);
+#endif
+}
+
 void asm_test(void)
 {
     char buf[128];
@@ -3200,6 +3239,7 @@ label2:
     printf("fancycpy2(%d)=%d\n", val, val2);
     asm volatile("mov $0x4243, %%esi" : "=r"(regvar));
     printf("regvar=%x\n", regvar);
+    test_high_clobbers();
     return;
 label1:
     goto label2;
