@@ -1544,14 +1544,13 @@ redo:
     case TOK_INCLUDE:
     case TOK_INCLUDE_NEXT:
         ch = file->buf_ptr[0];
-        /* XXX: incorrect if comments : use next_nomacro with a special mode */
-        skip_spaces();
-        if (ch == '<') {
+        skip_spaces(); /* XXX: incorrect if comments : use next_nomacro with a special mode */
+        c = 0;
+        if (ch == '<')
             c = '>';
-            goto read_name;
-        } else if (ch == '\"') {
+        if (ch == '\"')
             c = ch;
-        read_name:
+        if (c) {
             inp();
             q = buf;
             while (ch != c && ch != '\n' && ch != CH_EOF) {
@@ -1565,12 +1564,6 @@ redo:
             }
             *q = '\0';
             minp();
-#if 0
-            /* eat all spaces and comments after include */
-            /* XXX: slightly incorrect */
-            while (ch1 != '\n' && ch1 != CH_EOF)
-                inp();
-#endif
         } else {
             /* computed #include : either we have only strings or
                we have anything enclosed in '<>' */
