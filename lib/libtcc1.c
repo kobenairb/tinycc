@@ -593,18 +593,21 @@ long long __fixxfdi(long double a1)
 #ifndef __TINYC__
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #else
 /* Avoid including stdlib.h because it is not easily available when
    cross compiling */
 extern void *malloc(unsigned long long);
+void *memset(void *s, int c, size_t n);
 extern void free(void *);
 extern void abort(void);
 #endif
 
 enum __va_arg_type { __va_gen_reg, __va_float_reg, __va_stack };
 
+//This should be in sync with the declaration on our include/stdarg.h
 /* GCC compatible definition of va_list. */
-struct __va_list_struct
+typedef struct
 {
     unsigned int gp_offset;
     unsigned int fp_offset;
@@ -613,24 +616,22 @@ struct __va_list_struct
         char *overflow_arg_area;
     };
     char *reg_save_area;
-};
+} __va_list_struct;
 
 #undef __va_start
 #undef __va_arg
 #undef __va_copy
 #undef __va_end
 
-void *__va_start(void *fp)
+void __va_start(__va_list_struct *ap, void *fp)
 {
-    struct __va_list_struct *ap = (struct __va_list_struct *) malloc(
-        sizeof(struct __va_list_struct));
-    *ap = *(struct __va_list_struct *) ((char *) fp - 16);
+    memset(ap, 0, sizeof(__va_list_struct));
+    *ap = *(__va_list_struct *) ((char *) fp - 16);
     ap->overflow_arg_area = (char *) fp + ap->overflow_offset;
     ap->reg_save_area = (char *) fp - 176 - 16;
-    return ap;
 }
 
-void *__va_arg(struct __va_list_struct *ap, enum __va_arg_type arg_type, int size, int align)
+void *__va_arg(__va_list_struct *ap, enum __va_arg_type arg_type, int size, int align)
 {
     size = (size + 7) & ~7;
     align = (align + 7) & ~7;
@@ -664,19 +665,6 @@ void *__va_arg(struct __va_list_struct *ap, enum __va_arg_type arg_type, int siz
 #endif
         abort();
     }
-}
-
-void *__va_copy(struct __va_list_struct *src)
-{
-    struct __va_list_struct *dest = (struct __va_list_struct *) malloc(
-        sizeof(struct __va_list_struct));
-    *dest = *src;
-    return dest;
-}
-
-void __va_end(struct __va_list_struct *ap)
-{
-    free(ap);
 }
 
 #endif /* __x86_64__ */
