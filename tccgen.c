@@ -2606,7 +2606,8 @@ ST_FUNC void vstore(void)
                 vpush_global_sym(&func_old_type, TOK_memcpy4);
             else
 #endif
-                vpush_global_sym(&func_old_type, TOK_memcpy);
+                /* Use memmove, rather than memcpy, as dest and src may be same: */
+                vpush_global_sym(&func_old_type, TOK_memmove);
 
             vswap();
             /* source */
