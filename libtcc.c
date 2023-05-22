@@ -135,7 +135,7 @@ BOOL WINAPI DllMain(HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved)
 
 /********************************************************/
 /* copy a string and truncate it. */
-ST_FUNC char *pstrcpy(char *buf, int buf_size, const char *s)
+PUB_FUNC char *pstrcpy(char *buf, int buf_size, const char *s)
 {
     char *q, *q_end;
     int c;
@@ -155,7 +155,7 @@ ST_FUNC char *pstrcpy(char *buf, int buf_size, const char *s)
 }
 
 /* strcat and truncate. */
-ST_FUNC char *pstrcat(char *buf, int buf_size, const char *s)
+PUB_FUNC char *pstrcat(char *buf, int buf_size, const char *s)
 {
     int len;
     len = strlen(buf);
@@ -164,7 +164,7 @@ ST_FUNC char *pstrcat(char *buf, int buf_size, const char *s)
     return buf;
 }
 
-ST_FUNC char *pstrncpy(char *out, const char *in, size_t num)
+PUB_FUNC char *pstrncpy(char *out, const char *in, size_t num)
 {
     memcpy(out, in, num);
     out[num] = '\0';
@@ -1123,6 +1123,12 @@ LIBTCCAPI TCCState *tcc_new(void)
     tcc_define_symbol(s, "_WIN32", NULL);
 #ifdef TCC_TARGET_X86_64
     tcc_define_symbol(s, "_WIN64", NULL);
+    /* Those are defined by Visual Studio */
+    tcc_define_symbol(s, "_M_X64", "100");
+    tcc_define_symbol(s, "_M_AMD64", "100");
+#else
+    /* Defined by Visual Studio. 300 == 80386. */
+    tcc_define_symbol(s, "_M_IX86", "300");
 #endif
 #else
     tcc_define_symbol(s, "__unix__", NULL);
@@ -1543,7 +1549,7 @@ typedef struct stat file_info_t;
 typedef BY_HANDLE_FILE_INFORMATION file_info_t;
 #endif
 
-static int get_file_info(const char *fname, file_info_t *out_info)
+int get_file_info(const char *fname, file_info_t *out_info)
 {
 #ifndef _WIN32
     return stat(fname, out_info);
@@ -1565,7 +1571,7 @@ static int get_file_info(const char *fname, file_info_t *out_info)
 #endif
 }
 
-static int is_dir(file_info_t *info)
+int is_dir(file_info_t *info)
 {
 #ifndef _WIN32
     return S_ISDIR(info->st_mode);
@@ -1574,7 +1580,7 @@ static int is_dir(file_info_t *info)
 #endif
 }
 
-static int is_same_file(const file_info_t *fi1, const file_info_t *fi2)
+int is_same_file(const file_info_t *fi1, const file_info_t *fi2)
 {
 #ifndef _WIN32
     return fi1->st_dev == fi2->st_dev && fi1->st_ino == fi2->st_ino;

@@ -2036,7 +2036,7 @@ static void parse_escape_string(CString *outstr, const uint8_t *buf, int is_long
         cstr_wccat(outstr, '\0');
 }
 
-static void parse_string(const char *s, int len)
+void parse_string(const char *s, int len)
 {
     uint8_t buf[1000], *p = buf;
     int is_long, sep;
@@ -3217,7 +3217,7 @@ static int macro_subst_tok(TokenString *tok_str, Sym **nested_list, Sym *s, int 
     return 0;
 }
 
-static int paste_tokens(int t1, CValue *v1, int t2, CValue *v2)
+int paste_tokens(int t1, CValue *v1, int t2, CValue *v2)
 {
     CString cstr;
     int n;
