@@ -1718,7 +1718,7 @@ redo:
                         if (def->off >= def->size) {
                             int size = def->size;
                             size *= 2;
-                            if (size >= MACRO_STACK_SIZE)
+                            if (size > MACRO_STACK_SIZE)
                                 tcc_error("stack full");
                             def->data = tcc_realloc(def->data, size * sizeof(Sym *));
                             def->size = size;
