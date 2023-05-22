@@ -106,11 +106,11 @@ ST_FUNC int tcc_output_coff(TCCState *s1, FILE *f)
     o_filehdr.magic = 0x0108;                 /* see magic.h                          */
     o_filehdr.vstamp = 0x0190;                /* version stamp                        */
     o_filehdr.tsize = stext->data_offset;     /* text size in bytes, padded to FW bdry */
-    o_filehdr.dsize = sdata->data_offset;     /* initialized data "  " */
-    o_filehdr.bsize = sbss->data_offset;      /* uninitialized data "   " */
-    o_filehdr.entrypt = C67_main_entry_point; /* entry pt. */
-    o_filehdr.text_start = stext->sh_addr;    /* base of text used for this file */
-    o_filehdr.data_start = sdata->sh_addr;    /* base of data used for this file */
+    o_filehdr.dsize = sdata->data_offset;     /* initialized data "  "                */
+    o_filehdr.bsize = sbss->data_offset;      /* uninitialized data "   "             */
+    o_filehdr.entrypt = C67_main_entry_point; /* entry pt.                          */
+    o_filehdr.text_start = stext->sh_addr;    /* base of text used for this file      */
+    o_filehdr.data_start = sdata->sh_addr;    /* base of data used for this file      */
 
     // create all the section headers
 
@@ -126,9 +126,7 @@ ST_FUNC int tcc_output_coff(TCCState *s1, FILE *f)
             NSectionsToOutput++;
 
             if (CoffTextSectionNo == -1 && tcc_sect == stext)
-                CoffTextSectionNo = NSectionsToOutput; // rem which coff sect
-                                                       // number the .text sect
-                                                       // is
+                CoffTextSectionNo = NSectionsToOutput; // rem which coff sect number the .text sect is
 
             strcpy(coff_sec->s_name, tcc_sect->name); /* section name */
 
@@ -216,7 +214,7 @@ ST_FUNC int tcc_output_coff(TCCState *s1, FILE *f)
             nFuncs = 0;
             while (sym < sym_end) {
                 switch (sym->n_type) {
-                /* function start or end */
+                    /* function start or end */
                 case N_FUN:
                     if (sym->n_strx == 0) {
                         // end of function
@@ -261,7 +259,7 @@ ST_FUNC int tcc_output_coff(TCCState *s1, FILE *f)
                     }
                     break;
 
-                /* line number info */
+                    /* line number info */
                 case N_SLINE:
                     pc = sym->n_value + func_addr;
 
@@ -274,7 +272,7 @@ ST_FUNC int tcc_output_coff(TCCState *s1, FILE *f)
                     coff_sec->s_nlnno++;
                     file_pointer += LINESZ;
                     break;
-                /* include files */
+                    /* include files */
                 case N_BINCL:
                     str = (const char *) stabstr_section->data + sym->n_strx;
                 add_incl:
@@ -385,7 +383,7 @@ ST_FUNC int tcc_output_coff(TCCState *s1, FILE *f)
 
             while (sym < sym_end) {
                 switch (sym->n_type) {
-                /* function start or end */
+                    /* function start or end */
                 case N_FUN:
                     if (sym->n_strx == 0) {
                         // end of function
@@ -425,7 +423,7 @@ ST_FUNC int tcc_output_coff(TCCState *s1, FILE *f)
                     }
                     break;
 
-                /* line number info */
+                    /* line number info */
                 case N_SLINE:
                     pc = sym->n_value + func_addr;
 
@@ -449,7 +447,7 @@ ST_FUNC int tcc_output_coff(TCCState *s1, FILE *f)
 
                     break;
 
-                /* include files */
+                    /* include files */
                 case N_BINCL:
                     str = (const char *) stabstr_section->data + sym->n_strx;
                 add_incl2:

@@ -552,12 +552,12 @@ static int pe_write(struct pe_info *pe)
                0x022F  /*WORD    Characteristics; */
 #define CHARACTERISTICS_DLL 0x222E
 #elif defined(TCC_TARGET_I386)
-                0x00E0,     /*WORD    SizeOfOptionalHeader; */
-                0x030F      /*WORD    Characteristics; */
+               0x00E0,     /*WORD    SizeOfOptionalHeader; */
+               0x030F      /*WORD    Characteristics; */
 #define CHARACTERISTICS_DLL 0x230E
 #elif defined(TCC_TARGET_ARM)
-                0x00E0, /*WORD    SizeOfOptionalHeader; */
-                0x010F, /*WORD    Characteristics; */
+               0x00E0, /*WORD    SizeOfOptionalHeader; */
+               0x010F, /*WORD    Characteristics; */
 #define CHARACTERISTICS_DLL 0x230F
 #endif
            },
@@ -567,7 +567,7 @@ static int pe_write(struct pe_info *pe)
 #ifdef TCC_TARGET_X86_64
                0x020B, /*WORD    Magic; */
 #else
-                0x010B,     /*WORD    Magic; */
+               0x010B,     /*WORD    Magic; */
 #endif
                0x06,       /*BYTE    MajorLinkerVersion; */
                0x00,       /*BYTE    MinorLinkerVersion; */
@@ -583,7 +583,7 @@ static int pe_write(struct pe_info *pe)
 #if defined(TCC_TARGET_ARM)
                0x00100000, /*DWORD   ImageBase; */
 #else
-                0x00400000, /*DWORD   ImageBase; */
+               0x00400000, /*DWORD   ImageBase; */
 #endif
                0x00001000, /*DWORD   SectionAlignment; */
                0x00000200, /*DWORD   FileAlignment; */
