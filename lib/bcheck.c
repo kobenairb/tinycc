@@ -31,6 +31,12 @@
 
 /* #define BOUND_DEBUG */
 
+#ifdef BOUND_DEBUG
+#define dprintf(a...) fprintf(a)
+#else
+#define dprintf(a...)
+#endif
+
 /* define so that bound array is static (faster, but use memory if
    bound checking not used) */
 /* #define BOUND_STATIC */
@@ -49,12 +55,12 @@
 
 #define BOUND_T1_BITS 13
 #define BOUND_T2_BITS 11
-#define BOUND_T3_BITS (32 - BOUND_T1_BITS - BOUND_T2_BITS)
+#define BOUND_T3_BITS (sizeof(size_t) * 8 - BOUND_T1_BITS - BOUND_T2_BITS)
+#define BOUND_E_BITS (sizeof(size_t))
 
 #define BOUND_T1_SIZE (1 << BOUND_T1_BITS)
 #define BOUND_T2_SIZE (1 << BOUND_T2_BITS)
 #define BOUND_T3_SIZE (1 << BOUND_T3_BITS)
-#define BOUND_E_BITS 4
 
 #define BOUND_T23_BITS (BOUND_T2_BITS + BOUND_T3_BITS)
 #define BOUND_T23_SIZE (1 << BOUND_T23_BITS)
@@ -62,7 +68,7 @@
 /* this pointer is generated when bound check is incorrect */
 #define INVALID_POINTER ((void *) (-2))
 /* size of an empty region */
-#define EMPTY_SIZE 0xffffffff
+#define EMPTY_SIZE ((size_t) (-1))
 /* size of an invalid region */
 #define INVALID_SIZE 0
 
@@ -167,9 +173,7 @@ void *FASTCALL __bound_ptr_add(void *p, size_t offset)
 
     __bound_init();
 
-#if defined(BOUND_DEBUG)
-    printf("%s %s: 0x%x %d\n", __FILE__, __FUNCTION__, (int) p, offset);
-#endif
+    dprintf(stderr, "%s %s: %p %p\n", __FILE__, __FUNCTION__, p, offset);
 
     e = __bound_t1[addr >> (BOUND_T2_BITS + BOUND_T3_BITS)];
     e = (BoundEntry *) ((char *) e
@@ -190,32 +194,35 @@ void *FASTCALL __bound_ptr_add(void *p, size_t offset)
 
 /* return '(p + offset)' for pointer indirection (the resulting must
    be strictly inside the region */
-#define BOUND_PTR_INDIR(dsize)                                            \
-    void *FASTCALL __bound_ptr_indir##dsize(void *p, size_t offset)       \
-    {                                                                     \
-        size_t addr = (size_t) p;                                         \
-        BoundEntry *e;                                                    \
-                                                                          \
-        __bound_init();                                                   \
-        e = __bound_t1[addr >> (BOUND_T2_BITS + BOUND_T3_BITS)];          \
-        e = (BoundEntry *) ((char *) e                                    \
-                            + ((addr >> (BOUND_T3_BITS - BOUND_E_BITS))   \
-                               & ((BOUND_T2_SIZE - 1) << BOUND_E_BITS))); \
-        addr -= e->start;                                                 \
-        if (addr > e->size) {                                             \
-            e = __bound_find_region(e, p);                                \
-            addr = (size_t) p - e->start;                                 \
-        }                                                                 \
-        addr += offset + dsize;                                           \
-        if (addr > e->size) {                                             \
-            fprintf(stderr,                                               \
-                    "%s %s: %p is outside of the region\n",               \
-                    __FILE__,                                             \
-                    __FUNCTION__,                                         \
-                    p + offset);                                          \
-            return INVALID_POINTER; /* return an invalid pointer */       \
-        }                                                                 \
-        return p + offset;                                                \
+#define BOUND_PTR_INDIR(dsize)                                                                \
+    void *FASTCALL __bound_ptr_indir##dsize(void *p, size_t offset)                           \
+    {                                                                                         \
+        size_t addr = (size_t) p;                                                             \
+        BoundEntry *e;                                                                        \
+                                                                                              \
+        dprintf(stderr, "%s %s: %p %p start\n", __FILE__, __FUNCTION__, p, offset);           \
+                                                                                              \
+        __bound_init();                                                                       \
+        e = __bound_t1[addr >> (BOUND_T2_BITS + BOUND_T3_BITS)];                              \
+        e = (BoundEntry *) ((char *) e                                                        \
+                            + ((addr >> (BOUND_T3_BITS - BOUND_E_BITS))                       \
+                               & ((BOUND_T2_SIZE - 1) << BOUND_E_BITS)));                     \
+        addr -= e->start;                                                                     \
+        if (addr > e->size) {                                                                 \
+            e = __bound_find_region(e, p);                                                    \
+            addr = (size_t) p - e->start;                                                     \
+        }                                                                                     \
+        addr += offset + dsize;                                                               \
+        if (addr > e->size) {                                                                 \
+            fprintf(stderr,                                                                   \
+                    "%s %s: %p is outside of the region\n",                                   \
+                    __FILE__,                                                                 \
+                    __FUNCTION__,                                                             \
+                    p + offset);                                                              \
+            return INVALID_POINTER; /* return an invalid pointer */                           \
+        }                                                                                     \
+        dprintf(stderr, "%s %s: return p+offset = %p\n", __FILE__, __FUNCTION__, p + offset); \
+        return p + offset;                                                                    \
     }
 
 BOUND_PTR_INDIR(1)
@@ -235,9 +242,8 @@ BOUND_PTR_INDIR(16)
 void FASTCALL __bound_local_new(void *p1)
 {
     size_t addr, size, fp, *p = p1;
-#ifdef BOUND_DEBUG
-    fprintf(stderr, "%s, %s start p1=%p *p1=%p\n", __FILE__, __FUNCTION__, p, *p);
-#endif
+
+    dprintf(stderr, "%s, %s start p1=%p\n", __FILE__, __FUNCTION__, p);
     GET_CALLER_FP(fp);
     for (;;) {
         addr = p[0];
@@ -248,9 +254,7 @@ void FASTCALL __bound_local_new(void *p1)
         p += 2;
         __bound_new_region((void *) addr, size);
     }
-#ifdef BOUND_DEBUG
-    fprintf(stderr, "%s, %s end\n", __FILE__, __FUNCTION__);
-#endif
+    dprintf(stderr, "%s, %s end\n", __FILE__, __FUNCTION__);
 }
 
 /* called when leaving a function to delete all the local regions */
@@ -271,7 +275,7 @@ void FASTCALL __bound_local_delete(void *p1)
 static BoundEntry *__bound_new_page(void)
 {
     BoundEntry *page;
-    int i;
+    size_t i;
 
     page = libc_malloc(sizeof(BoundEntry) * BOUND_T2_SIZE);
     if (!page)
@@ -299,11 +303,11 @@ static void bound_free_entry(BoundEntry *e)
     libc_free(e);
 }
 
-static inline BoundEntry *get_page(int index)
+static BoundEntry *get_page(size_t index)
 {
     BoundEntry *page;
     page = __bound_t1[index];
-    if (page == __bound_empty_t2 || page == __bound_invalid_t2) {
+    if (!page || page == __bound_empty_t2 || page == __bound_invalid_t2) {
         /* create a new page if necessary */
         page = __bound_new_page();
         __bound_t1[index] = page;
@@ -328,7 +332,7 @@ static void mark_invalid(size_t addr, size_t size)
         t2_end = 1 << (BOUND_T1_BITS + BOUND_T2_BITS);
 
 #if 0
-    printf("mark_invalid: start = %x %x\n", t2_start, t2_end);
+    dprintf(stderr, "mark_invalid: start = %x %x\n", t2_start, t2_end);
 #endif
 
     /* first we handle full pages */
@@ -367,7 +371,7 @@ static void mark_invalid(size_t addr, size_t size)
 
 void __bound_init(void)
 {
-    int i;
+    size_t i;
     BoundEntry *page;
     size_t start, size;
     size_t *p;
@@ -378,9 +382,7 @@ void __bound_init(void)
 
     inited = 1;
 
-#ifdef BOUND_DEBUG
-    fprintf(stderr, "%s, %s() start\n", __FILE__, __FUNCTION__);
-#endif
+    dprintf(stderr, "%s, %s() start\n", __FILE__, __FUNCTION__);
 
     /* save malloc hooks and install bound check hooks */
     install_malloc_hooks();
@@ -448,9 +450,8 @@ void __bound_init(void)
         __bound_new_region((void *) p[0], p[1]);
         p += 2;
     }
-#ifdef BOUND_DEBUG
-    fprintf(stderr, "%s, %s() end\n\n", __FILE__, __FUNCTION__);
-#endif
+
+    dprintf(stderr, "%s, %s() end\n\n", __FILE__, __FUNCTION__);
 }
 
 void __bound_main_arg(void **p)
@@ -458,13 +459,13 @@ void __bound_main_arg(void **p)
     void *start = p;
     while (*p++)
         ;
-#ifdef BOUND_DEBUG
-    fprintf(stderr,
+
+    dprintf(stderr,
             "%s, %s calling __bound_new_region(%p, %p)\n",
             __FILE__,
             __FUNCTION__,
             (void *) p - start);
-#endif
+
     __bound_new_region(start, (void *) p - start);
 }
 
@@ -501,9 +502,7 @@ void __bound_new_region(void *p, size_t size)
 
     __bound_init();
 
-#ifdef BOUND_DEBUG
-    fprintf(stderr, "%s, %s(%p, %p) start\n", __FILE__, __FUNCTION__, p, size);
-#endif
+    dprintf(stderr, "%s, %s(%p, %p) start\n", __FILE__, __FUNCTION__, p, size);
 
     start = (size_t) p;
     end = start + size;
@@ -555,9 +554,8 @@ void __bound_new_region(void *p, size_t size)
         }
         add_region(e, start, size);
     }
-#ifdef BOUND_DEBUG
-    fprintf(stderr, "%s, %s end\n", __FILE__, __FUNCTION__);
-#endif
+
+    dprintf(stderr, "%s, %s end\n", __FILE__, __FUNCTION__);
 }
 
 /* delete a region */
@@ -611,9 +609,7 @@ int __bound_delete_region(void *p)
 
     __bound_init();
 
-#ifdef BOUND_DEBUG
-    fprintf(stderr, "%s %s() start\n", __FILE__, __FUNCTION__);
-#endif
+    dprintf(stderr, "%s %s() start\n", __FILE__, __FUNCTION__);
 
     start = (size_t) p;
     t1_start = start >> (BOUND_T2_BITS + BOUND_T3_BITS);
@@ -680,9 +676,7 @@ int __bound_delete_region(void *p)
         delete_region(e, p, empty_size);
     }
 
-#ifdef BOUND_DEBUG
-    fprintf(stderr, "%s %s() end\n", __FILE__, __FUNCTION__);
-#endif
+    dprintf(stderr, "%s %s() end\n", __FILE__, __FUNCTION__);
 
     return 0;
 }
@@ -770,9 +764,8 @@ void *__bound_malloc(size_t size, const void *caller)
     if (!ptr)
         return NULL;
 
-#ifdef BOUND_DEBUG
-    fprintf(stderr, "%s, %s calling __bound_new_region(%p, %p)\n", __FILE__, __FUNCTION__, ptr, size);
-#endif
+    dprintf(stderr, "%s, %s calling __bound_new_region(%p, %p)\n", __FILE__, __FUNCTION__, ptr, size);
+
     __bound_new_region(ptr, size);
     return ptr;
 }
@@ -803,9 +796,8 @@ void *__bound_memalign(size_t size, size_t align, const void *caller)
     if (!ptr)
         return NULL;
 
-#ifdef BOUND_DEBUG
-    fprintf(stderr, "%s, %s calling __bound_new_region(%p, %p)\n", __FILE__, __FUNCTION__, ptr, size);
-#endif
+    dprintf(stderr, "%s, %s calling __bound_new_region(%p, %p)\n", __FILE__, __FUNCTION__, ptr, size);
+
     __bound_new_region(ptr, size);
     return ptr;
 }
@@ -858,23 +850,23 @@ void *__bound_calloc(size_t nmemb, size_t size)
 static void bound_dump(void)
 {
     BoundEntry *page, *e;
-    int i, j;
+    size_t i, j;
 
-    printf("region dump:\n");
+    fprintf(stderr, "region dump:\n");
     for(i=0;i<BOUND_T1_SIZE;i++) {
         page = __bound_t1[i];
         for(j=0;j<BOUND_T2_SIZE;j++) {
             e = page + j;
             /* do not print invalid or empty entries */
             if (e->size != EMPTY_SIZE && e->start != 0) {
-                printf("%08x:",
+                fprintf(stderr, "%08x:",
                        (i << (BOUND_T2_BITS + BOUND_T3_BITS)) +
                        (j << BOUND_T3_BITS));
                 do {
-                    printf(" %08lx:%08lx", e->start, e->start + e->size);
+                    fprintf(stderr, " %08lx:%08lx", e->start, e->start + e->size);
                     e = e->next;
                 } while (e != NULL);
-                printf("\n");
+                fprintf(stderr, "\n");
             }
         }
     }
@@ -888,19 +880,27 @@ static void __bound_check(const void *p, size_t size)
 {
     if (size == 0)
         return;
-    p = __bound_ptr_add((void *) p, size);
+    p = __bound_ptr_add((void *) p, size - 1);
     if (p == INVALID_POINTER)
         bound_error("invalid pointer");
 }
 
 void *__bound_memcpy(void *dst, const void *src, size_t size)
 {
+    void *p;
+
+    dprintf(stderr, "%s %s: start, dst=%p src=%p size=%p\n", __FILE__, __FUNCTION__, dst, src, size);
+
     __bound_check(dst, size);
     __bound_check(src, size);
     /* check also region overlap */
     if (src >= dst && src < dst + size)
         bound_error("overlapping regions in memcpy()");
-    return memcpy(dst, src, size);
+
+    p = memcpy(dst, src, size);
+
+    dprintf(stderr, "%s %s: end, p=%p\n", __FILE__, __FUNCTION__, p);
+    return p;
 }
 
 void *__bound_memmove(void *dst, const void *src, size_t size)
@@ -936,7 +936,12 @@ int __bound_strlen(const char *s)
 
 char *__bound_strcpy(char *dst, const char *src)
 {
-    int len;
+    size_t len;
+    void *p;
+
+    dprintf(stderr, "%s %s: strcpy start, dst=%p src=%p\n", __FILE__, __FUNCTION__, dst, src);
     len = __bound_strlen(src);
-    return __bound_memcpy(dst, src, len + 1);
+    p = __bound_memcpy(dst, src, len + 1);
+    dprintf(stderr, "%s %s: strcpy end, p=%p\n", __FILE__, __FUNCTION__, dst, src, p);
+    return p;
 }

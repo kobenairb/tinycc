@@ -1578,7 +1578,6 @@ ST_FUNC void tcc_add_bcheck(TCCState *s1)
                 0,
                 bounds_section->sh_num,
                 "__bounds_start");
-#ifdef TCC_TARGET_I386
     if (s1->output_type != TCC_OUTPUT_MEMORY) {
         /* add 'call __bound_init()' in .init section */
 
@@ -1601,7 +1600,6 @@ ST_FUNC void tcc_add_bcheck(TCCState *s1)
         } else
             tcc_warning("__bound_init not defined");
     }
-#endif
 #endif
 }
 
