@@ -204,7 +204,7 @@ void *FASTCALL __bound_ptr_add(void *p, size_t offset)
             addr = (size_t) p - e->start;                                 \
         }                                                                 \
         addr += offset + dsize;                                           \
-        if (addr >= e->size)                                              \
+        if (addr > e->size)                                               \
             return INVALID_POINTER; /* return an invalid pointer */       \
         return p + offset;                                                \
     }
