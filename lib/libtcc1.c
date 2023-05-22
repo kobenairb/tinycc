@@ -606,7 +606,7 @@ extern void free(void *);
 extern void abort(void);
 #endif
 
-enum __va_arg_type { __va_gen_reg, __va_float_reg, __va_ld_reg, __va_stack };
+enum __va_arg_type { __va_gen_reg, __va_float_reg, __va_stack };
 
 //This should be in sync with the declaration on our include/stdarg.h
 /* GCC compatible definition of va_list. */
