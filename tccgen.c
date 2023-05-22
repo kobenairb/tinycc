@@ -50,6 +50,7 @@ ST_DATA int nb_sym_pools;
 
 ST_DATA Sym *global_stack;
 ST_DATA Sym *local_stack;
+ST_DATA Sym *scope_stack_bottom;
 ST_DATA Sym *define_stack;
 ST_DATA Sym *global_label_stack;
 ST_DATA Sym *local_label_stack;
@@ -149,6 +150,12 @@ ST_INLN void sym_free(Sym *sym)
 ST_FUNC Sym *sym_push2(Sym **ps, int v, int t, long c)
 {
     Sym *s;
+    if (ps == &local_stack) {
+        for (s = *ps; s && s != scope_stack_bottom; s = s->prev)
+            if (!(v & SYM_FIELD) && (v & ~SYM_STRUCT) < SYM_FIRST_ANOM && s->v == v)
+                tcc_error("incompatible types for redefinition of '%s'", get_tok_str(v, NULL));
+    }
+    s = *ps;
     s = sym_malloc();
     s->asm_label = NULL;
     s->v = v;
@@ -4348,7 +4355,7 @@ static void label_or_decl(int l)
 static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_reg, int is_expr)
 {
     int a, b, c, d;
-    Sym *s;
+    Sym *s, *frame_bottom;
 
     /* generate line number info */
     if (tcc_state->do_debug && (last_line_num != file->line_num || last_ind != ind)) {
@@ -4398,6 +4405,9 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         next();
         /* record local declaration stack position */
         s = local_stack;
+        frame_bottom = sym_push2(&local_stack, SYM_FIELD, 0, 0);
+        frame_bottom->next = scope_stack_bottom;
+        scope_stack_bottom = frame_bottom;
         llabel = local_label_stack;
         /* handle local labels declarations */
         if (tok == TOK_LABEL) {
@@ -4440,6 +4450,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
             }
         }
         /* pop locally defined symbols */
+        scope_stack_bottom = scope_stack_bottom->next;
         sym_pop(&local_stack, s);
         next();
     } else if (tok == TOK_RETURN) {
@@ -4507,6 +4518,9 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         next();
         skip('(');
         s = local_stack;
+        frame_bottom = sym_push2(&local_stack, SYM_FIELD, 0, 0);
+        frame_bottom->next = scope_stack_bottom;
+        scope_stack_bottom = frame_bottom;
         if (tok != ';') {
             /* c99 for-loop init decl? */
             if (!decl0(VT_LOCAL, 1)) {
@@ -4538,6 +4552,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         gjmp_addr(c);
         gsym(a);
         gsym_addr(b, c);
+        scope_stack_bottom = scope_stack_bottom->next;
         sym_pop(&local_stack, s);
     } else if (tok == TOK_DO) {
         next();
@@ -5476,7 +5491,9 @@ static void gen_function(Sym *sym)
     gfunc_epilog();
     cur_text_section->data_offset = ind;
     label_pop(&global_label_stack, NULL);
-    sym_pop(&local_stack, NULL); /* reset local stack */
+    /* reset local stack */
+    scope_stack_bottom = NULL;
+    sym_pop(&local_stack, NULL);
     /* end of function */
     /* patch symbol size */
     ((ElfW(Sym) *) symtab_section->data)[sym->c].st_size = ind - func_ind;
