@@ -227,9 +227,8 @@ typedef struct Sym
     char *asm_label; /* associated asm label */
     long r;          /* associated register */
     union {
-        long c;    /* associated number */
-        int *d;    /* define token stream */
-        SValue *s; /* associated stack value */
+        long c; /* associated number */
+        int *d; /* define token stream */
     };
     CType type; /* associated type */
     union {

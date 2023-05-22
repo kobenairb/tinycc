@@ -2072,22 +2072,9 @@ ST_FUNC int type_size(CType *type, int *a)
 ST_FUNC void vla_runtime_type_size(CType *type, int *a)
 {
     if (type->t & VT_VLA) {
-        Sym *s;
-
-        s = type->ref;
-        vla_runtime_type_size(&s->type, a);
-        vpushv(s->s);
-        if ((vtop->r & (VT_SYM | VT_LVAL | VT_VALMASK)) != VT_CONST) {
-            gv_dup();
-            vswap();
-            vpop();
-        }
-        gen_op('*');
+        vset(&int_type, VT_LOCAL | VT_LVAL, type->ref->c);
     } else {
-        int size;
-
-        size = type_size(type, a);
-        vpushi(size);
+        vpushi(type_size(type, a));
     }
 }
 
@@ -3193,8 +3180,6 @@ static void post_type(CType *type, AttributeDef *ad)
         type->t = VT_FUNC;
         type->ref = s;
     } else if (tok == '[') {
-        SValue *last_vtop = NULL;
-
         /* array definition */
         next();
         if (tok == TOK_RESTRICT1)
@@ -3205,14 +3190,12 @@ static void post_type(CType *type, AttributeDef *ad)
             gexpr();
             if ((vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST) {
                 n = vtop->c.i;
-                last_vtop = vtop;
                 if (n < 0)
                     error("invalid array size");
             } else {
                 if (!is_integer_btype(vtop->type.t & VT_BTYPE))
                     error("size of variable length array should be an integer");
                 t1 = VT_VLA;
-                last_vtop = vtop;
             }
         }
         skip(']');
@@ -3220,15 +3203,23 @@ static void post_type(CType *type, AttributeDef *ad)
         post_type(type, ad);
         t1 |= type->t & VT_VLA;
 
+        if (t1 & VT_VLA) {
+            loc -= type_size(&int_type, &align);
+            loc &= -align;
+            n = loc;
+
+            vla_runtime_type_size(type, &align);
+            gen_op('*');
+            vset(&int_type, VT_LOCAL | VT_LVAL, loc);
+            vswap();
+            vstore();
+        }
+        if (n != -1)
+            vpop();
+
         /* we push an anonymous symbol which will contain the array
            element type */
         s = sym_push(SYM_FIELD, type, 0, n);
-        if (t1 & VT_VLA) {
-            s->s = last_vtop; // That's ok, we don't need n with VLA
-        } else {
-            if (n >= 0)
-                vpop();
-        }
         type->t = (t1 ? VT_VLA : VT_ARRAY) | VT_PTR;
         type->ref = s;
     }
@@ -3749,10 +3740,7 @@ tok_next:
         } else {
             r = s->r;
         }
-        if (s->type.t & VT_VLA)
-            vpushv(s->s);
-        else
-            vset(&s->type, r, s->c);
+        vset(&s->type, r, s->c);
         /* if forward reference, we must point to s */
         if (vtop->r & VT_SYM) {
             vtop->sym = s;
@@ -4880,6 +4868,10 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
         /* return value */
         retcval.i = 0;
         vsetc(type, REG_IRET, &retcval);
+        vset(type, VT_LOCAL | VT_LVAL, c);
+        vswap();
+        vstore();
+        vpop();
     } else if (type->t & VT_ARRAY) {
         s = type->ref;
         n = s->c;
@@ -5109,7 +5101,6 @@ static void decl_initializer_alloc(
     ParseState saved_parse_state = {0};
     TokenString init_str;
     Section *sec;
-    Sym *vla = NULL;
     Sym *flexible_array;
 
     flexible_array = NULL;
@@ -5210,7 +5201,7 @@ static void decl_initializer_alloc(
 #endif
         if (v) {
             /* local variable */
-            vla = sym_push(v, type, r, addr);
+            sym_push(v, type, r, addr);
         } else {
             /* push local reference */
             vset(type, r, addr);
@@ -5321,8 +5312,6 @@ static void decl_initializer_alloc(
     }
     if (has_init || (type->t & VT_VLA)) {
         decl_initializer(type, sec, addr, 1, 0);
-        if (type->t & VT_VLA)
-            vla->s = vtop;
         /* restore parse state if needed */
         if (init_str.str) {
             tok_str_free(init_str.str);
