@@ -371,6 +371,7 @@ struct pe_info
     int type;
     DWORD sizeofheaders;
     ADDR3264 imagebase;
+    const char *start_symbol;
     DWORD start_addr;
     DWORD imp_offs;
     DWORD imp_size;
@@ -670,7 +671,6 @@ static int pe_write(struct pe_info *pe)
         switch (si->cls) {
         case sec_text:
             pe_header.opthdr.BaseOfCode = addr;
-            pe_header.opthdr.AddressOfEntryPoint = addr + pe->start_addr;
             break;
 
         case sec_data:
@@ -738,6 +738,7 @@ static int pe_write(struct pe_info *pe)
 
     //pe_header.filehdr.TimeDateStamp = time(NULL);
     pe_header.filehdr.NumberOfSections = pe->sec_count;
+    pe_header.opthdr.AddressOfEntryPoint = pe->start_addr;
     pe_header.opthdr.SizeOfHeaders = pe->sizeofheaders;
     pe_header.opthdr.ImageBase = pe->imagebase;
     pe_header.opthdr.Subsystem = pe->subsystem;
@@ -1349,6 +1350,9 @@ static int pe_check_symbols(struct pe_info *pe)
             }
 
         not_found:
+            if (ELFW(ST_BIND)(sym->st_info) == STB_WEAK)
+                /* STB_WEAK undefined symbols are accepted */
+                continue;
             tcc_error_noabort("undefined symbol '%s'", name);
             ret = -1;
 
@@ -1809,16 +1813,17 @@ static void pe_add_runtime(TCCState *s1, struct pe_info *pe)
     if (!s1->leading_underscore || strchr(start_symbol, '@'))
         ++start_symbol;
 
-    /* grab the startup code from libtcc1 */
-    /* only (PE_Dll == pe_type) doesn't need it,
-       (TCC_OUTPUT_MEMORY == s1->output_type && PE_Dll == pe_type) is illegal */
-    set_elf_sym(symtab_section,
-                0,
-                0,
-                ELFW(ST_INFO)(STB_GLOBAL, STT_NOTYPE),
-                0,
-                SHN_UNDEF,
-                start_symbol);
+        /* grab the startup code from libtcc1 */
+#ifdef TCC_IS_NATIVE
+    if (TCC_OUTPUT_MEMORY != s1->output_type || s1->runtime_main)
+#endif
+        set_elf_sym(symtab_section,
+                    0,
+                    0,
+                    ELFW(ST_INFO)(STB_GLOBAL, STT_NOTYPE),
+                    0,
+                    SHN_UNDEF,
+                    start_symbol);
 
     tcc_add_pragma_libs(s1);
 
@@ -1835,16 +1840,10 @@ static void pe_add_runtime(TCCState *s1, struct pe_info *pe)
         }
     }
 
-    if (TCC_OUTPUT_MEMORY == s1->output_type) {
+    if (TCC_OUTPUT_MEMORY == s1->output_type)
         pe_type = PE_RUN;
-#ifdef TCC_IS_NATIVE
-        s1->runtime_main = start_symbol;
-#endif
-    } else {
-        pe->start_addr = (DWORD) (uintptr_t) tcc_get_symbol_err(s1, start_symbol);
-    }
-
     pe->type = pe_type;
+    pe->start_symbol = start_symbol;
 }
 
 static void pe_set_options(TCCState *s1, struct pe_info *pe)
@@ -1923,6 +1922,7 @@ ST_FUNC int pe_output_file(TCCState *s1, const char *filename)
                 pe_relocate_rva(&pe, s);
             }
         }
+        pe.start_addr = (DWORD) ((uintptr_t) tcc_get_symbol_err(s1, pe.start_symbol) - pe.imagebase);
         if (s1->nb_errors)
             ret = -1;
         else
@@ -1932,6 +1932,7 @@ ST_FUNC int pe_output_file(TCCState *s1, const char *filename)
 #ifdef TCC_IS_NATIVE
         pe.thunk = data_section;
         pe_build_imports(&pe);
+        s1->runtime_main = pe.start_symbol;
 #endif
     }
 
