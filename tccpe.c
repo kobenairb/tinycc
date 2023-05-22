@@ -58,17 +58,19 @@
 
 #endif
 
+#if 0
 #ifdef _WIN32
-void dbg_printf(const char *fmt, ...)
+void dbg_printf (const char *fmt, ...)
 {
     char buffer[4000];
     va_list arg;
     int x;
     va_start(arg, fmt);
-    x = vsprintf(buffer, fmt, arg);
-    strcpy(buffer + x, "\n");
+    x = vsprintf (buffer, fmt, arg);
+    strcpy(buffer+x, "\n");
     OutputDebugString(buffer);
 }
+#endif
 #endif
 
 /* ----------------------------------------------------------- */
