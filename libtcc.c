@@ -1931,6 +1931,10 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
             s->option_m = tcc_strdup(optarg);
             break;
         case TCC_OPTION_o:
+            if (s->outfile) {
+                tcc_warning("multiple -o option");
+                tcc_free(s->outfile);
+            }
             s->outfile = tcc_strdup(optarg);
             break;
         case TCC_OPTION_r:
