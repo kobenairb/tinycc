@@ -2794,8 +2794,7 @@ do_decl:
             bit_pos = 0;
             offset = 0;
             while (tok != '}') {
-                if (parse_btype(&btype, &ad))
-                    expect("type");
+                parse_btype(&btype, &ad);
                 while (1) {
                     bit_size = -1;
                     v = 0;
