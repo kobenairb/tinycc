@@ -1004,6 +1004,8 @@ ST_FN void pe_build_exports(struct pe_info *pe)
     }
     pe->exp_size = pe->thunk->data_offset - pe->exp_offs;
     dynarray_reset(&sorted, &sym_count);
+    if (op)
+        fclose(op);
 }
 
 /* ------------------------------------------------------------- */
