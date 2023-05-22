@@ -675,7 +675,7 @@ ST_FUNC void put_extern_sym2(
             name = buf1;
         }
         if (sym->asm_label) {
-            name = sym->asm_label;
+            name = get_tok_str(sym->asm_label, NULL);
         }
         info = ELFW(ST_INFO)(sym_bind, sym_type);
         sym->c = add_elf_sym(symtab_section, value, size, info, other, sh_num, name);

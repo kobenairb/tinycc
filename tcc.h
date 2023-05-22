@@ -428,13 +428,14 @@ typedef struct AttributeDef
     struct Attribute a;
     struct Section *section;
     int alias_target; /* token */
+    int asm_label;    /* associated asm label */
 } AttributeDef;
 
 /* symbol management */
 typedef struct Sym
 {
-    int v;           /* symbol token */
-    char *asm_label; /* associated asm label */
+    int v;         /* symbol token */
+    int asm_label; /* associated asm label */
     union {
         long r; /* associated register */
         struct Attribute a;
