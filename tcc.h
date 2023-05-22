@@ -645,7 +645,7 @@ struct TCCState
 #define VT_EXPORT 0x00008000  /* win32: data exported from dll */
 #define VT_WEAK 0x00010000    /* win32: data exported from dll */
 
-#define VT_STRUCT_SHIFT 18 /* shift for bitfield shift values */
+#define VT_STRUCT_SHIFT 17 /* shift for bitfield shift values */
 
 /* type mask (except storage) */
 #define VT_STORAGE \
