@@ -691,6 +691,7 @@ ST_FUNC int tcc_open(TCCState *s1, const char *filename)
 static int tcc_compile(TCCState *s1)
 {
     Sym *define_start;
+    SValue *pvtop;
     char buf[512];
     volatile int section_sym;
 
@@ -760,6 +761,7 @@ static int tcc_compile(TCCState *s1)
 
     define_start = define_stack;
     nocode_wanted = 1;
+    pvtop = vtop;
 
     if (setjmp(s1->error_jmp_buf) == 0) {
         s1->nb_errors = 0;
@@ -788,6 +790,8 @@ static int tcc_compile(TCCState *s1)
 
     sym_pop(&global_stack, NULL);
     sym_pop(&local_stack, NULL);
+    if (pvtop != vtop)
+        warning("internal compiler error: vstack leak? (%d)", vtop - pvtop);
 
     return s1->nb_errors != 0 ? -1 : 0;
 }
