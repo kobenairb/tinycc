@@ -3710,6 +3710,12 @@ ST_FUNC int tcc_preprocess(TCCState *s1)
                   | PARSE_FLAG_SPACES | PARSE_FLAG_ACCEPT_STRAYS;
     define_start = define_stack;
 
+    /* Credits to Fabrice Bellard's initial revision to demonstrate its
+       capability to compile and run itself, provided all numbers are
+       given as decimals. tcc -E -P10 will do. */
+    if (s1->Pflag == 1 + 10)
+        parse_flags |= PARSE_FLAG_TOK_NUM, s1->Pflag = 1;
+
 #ifdef PP_BENCH
     /* for PP benchmarks */
     do
