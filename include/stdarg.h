@@ -12,7 +12,7 @@ va_list __va_copy(va_list src);
 void __va_end(va_list ap);
 
 #define va_start(ap, last) ((ap) = __va_start(__builtin_frame_address(0)))
-#define va_arg(ap, type) (*(type *) (__va_arg(ap, __builtin_va_arg_types(type), sizeof(type))));
+#define va_arg(ap, type) (*(type *) (__va_arg(ap, __builtin_va_arg_types(type), sizeof(type))))
 #define va_copy(dest, src) ((dest) = __va_copy(src))
 #define va_end(ap) __va_end(ap)
 
