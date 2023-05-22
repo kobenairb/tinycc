@@ -447,7 +447,7 @@ ST_FUNC void vpush_global_sym(CType *type, int v)
 
 ST_FUNC void vset(CType *type, int r, int v)
 {
-    CValue cval;
+    CValue cval = {0};
 
     cval.i = v;
     vsetc(type, r, &cval);
@@ -1996,11 +1996,13 @@ static void gen_cast(CType *type)
                         s = 24;
                     else if ((dbt & VT_BTYPE) == VT_SHORT)
                         s = 16;
-
-                    if (dbt & VT_UNSIGNED)
-                        vtop->c.ui = ((unsigned int) vtop->c.ll << s) >> s;
-                    else
-                        vtop->c.i = ((int) vtop->c.ll << s) >> s;
+#ifdef TCC_TARGET_X86_64
+                    if (!(dbt & (VT_PTR | VT_LLONG | VT_FUNC | VT_STRUCT)))
+#endif
+                        if (dbt & VT_UNSIGNED)
+                            vtop->c.ui = ((unsigned int) vtop->c.ll << s) >> s;
+                        else
+                            vtop->c.i = ((int) vtop->c.ll << s) >> s;
                 }
             }
         } else if (p && dbt == VT_BOOL) {
@@ -3914,7 +3916,11 @@ tok_next:
         /* if forward reference, we must point to s */
         if (vtop->r & VT_SYM) {
             vtop->sym = s;
-            vtop->c.ul = 0;
+#ifdef TCC_TARGET_X86_64
+            s1->vtop->c.ull = 0;
+#else
+            s1->vtop->c.ul = 0;
+#endif
         }
         break;
     }
@@ -5106,6 +5112,12 @@ static void init_putv(CType *type, Section *sec, unsigned long c, int v, int exp
             break;
         case VT_LLONG:
             *(long long *) ptr |= (vtop->c.ll & bit_mask) << bit_pos;
+            break;
+        case VT_PTR:
+            if (s1->vtop->r & VT_SYM) {
+                greloc(s1, sec, s1->vtop->sym, c, R_DATA_PTR);
+            }
+            *(addr_t *) ptr |= (s1->vtop->c.ull & bit_mask) << bit_pos;
             break;
         default:
             if (vtop->r & VT_SYM) {
