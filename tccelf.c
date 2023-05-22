@@ -2095,16 +2095,17 @@ static void bind_exe_dynsyms(TCCState *s1)
     }
 }
 
-/* Bind symbols of libraries: export non local symbols of executable that
-   resolve undefined symbols of shared libraries */
+/* Bind symbols of libraries: export all non local symbols of executable that
+   are referenced by shared libraries. The reason is that the dynamic loader
+   search symbol first in executable and then in libraries. Therefore a
+   reference to a symbol already defined by a library can still be resolved by
+   a symbol in the executable. */
 static void bind_libs_dynsyms(TCCState *s1)
 {
     const char *name;
     int sym_index;
     ElfW(Sym) * sym, *esym;
 
-    /* now look at unresolved dynamic symbols and export
-       corresponding symbol */
     for_each_elem(s1->dynsymtab_section, 1, esym, ElfW(Sym))
     {
         name = (char *) s1->dynsymtab_section->link->data + esym->st_name;
@@ -2128,7 +2129,10 @@ static void bind_libs_dynsyms(TCCState *s1)
     }
 }
 
-/* Export all non local symbols (for shared libraries) */
+/* Export all non local symbols. This is used by shared libraries so that the
+   non local symbols they define can resolve a reference in another shared
+   library or in the executable. Correspondingly, it allows undefined local
+   symbols to be resolved by other shared libraries or by the executable. */
 static void export_global_syms(TCCState *s1)
 {
     int nb_syms, dynindex, index;
