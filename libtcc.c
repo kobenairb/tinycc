@@ -433,6 +433,7 @@ ST_FUNC void put_extern_sym2(
     ElfW(Sym) * esym;
     const char *name;
     char buf1[256];
+    char buf[32];
 
     if (section == NULL)
         sh_num = SHN_UNDEF;
@@ -462,7 +463,6 @@ ST_FUNC void put_extern_sym2(
         name = get_tok_str(sym->v, NULL);
 #ifdef CONFIG_TCC_BCHECK
         if (tcc_state->do_bounds_check) {
-            char buf[32];
             /* XXX: avoid doing that for statics ? */
             /* if bound checking is activated, we change some function
                names by adding the "__bound" prefix */
