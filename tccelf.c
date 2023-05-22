@@ -1012,6 +1012,8 @@ static unsigned long put_got_entry(
         } else if (s1->output_type == TCC_OUTPUT_MEMORY || ELFW(ST_BIND)(sym->st_info) == STB_WEAK
                    || relocs_info[reloc_type].gotplt_entry == ALWAYS_GOTPLT_ENTRY)
             index = put_elf_sym(s1->dynsym, offset, size, info, 0, sym->st_shndx, name);
+        else
+            tcc_error("Runtime relocation without dynamic symbol: %s", name);
         put_elf_reloc(s1->dynsym, s1->got, got_offset, dyn_reloc_type, index);
     } else
         put_elf_reloc(symtab_section, s1->got, got_offset, dyn_reloc_type, sym_index);
