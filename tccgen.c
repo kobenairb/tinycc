@@ -3966,7 +3966,7 @@ tok_next:
 
 #ifdef TCC_TARGET_ARM64
     case TOK___va_start: {
-        if (!nocode_wanted)
+        if (nocode_wanted)
             tcc_error("statement in global scope");
         next();
         skip('(');
@@ -3981,7 +3981,7 @@ tok_next:
         break;
     }
     case TOK___va_arg: {
-        if (!nocode_wanted)
+        if (nocode_wanted)
             tcc_error("statement in global scope");
         CType type;
         next();
