@@ -545,7 +545,7 @@ ST_FUNC void save_reg(int r)
                 /* store register in the stack */
                 type = &p->type;
                 if ((p->r & VT_LVAL) || (!is_float(type->t) && (type->t & VT_BTYPE) != VT_LLONG))
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
                     type = &char_pointer_type;
 #else
                     type = &int_type;
@@ -562,7 +562,7 @@ ST_FUNC void save_reg(int r)
                     o(0xd8dd); /* fstp %st(0) */
                 }
 #endif
-#ifndef TCC_TARGET_X86_64
+#if !defined(TCC_TARGET_ARM64) && !defined(TCC_TARGET_X86_64)
                 /* special long long case */
                 if ((type->t & VT_BTYPE) == VT_LLONG) {
                     sv.c.ul += 4;
@@ -679,7 +679,7 @@ static void move_reg(int r, int s, int t)
 }
 
 /* get address of vtop (vtop MUST BE an lvalue) */
-static void gaddrof(void)
+ST_FUNC void gaddrof(void)
 {
     if (vtop->r & VT_REF)
         gv(RC_INT);
@@ -797,11 +797,13 @@ ST_FUNC int gv(int rc)
 
         r = vtop->r & VT_VALMASK;
         rc2 = (rc & RC_FLOAT) ? RC_FLOAT : RC_INT;
+#ifndef TCC_TARGET_ARM64
         if (rc == RC_IRET)
             rc2 = RC_LRET;
 #ifdef TCC_TARGET_X86_64
         else if (rc == RC_FRET)
             rc2 = RC_QRET;
+#endif
 #endif
 
         /* need to reload if:
@@ -809,7 +811,7 @@ ST_FUNC int gv(int rc)
            - lvalue (need to dereference pointer)
            - already a register, but not in the right class */
         if (r >= VT_CONST || (vtop->r & VT_LVAL) || !(reg_classes[r] & rc)
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
             || ((vtop->type.t & VT_BTYPE) == VT_QLONG && !(reg_classes[vtop->r2] & rc2))
             || ((vtop->type.t & VT_BTYPE) == VT_QFLOAT && !(reg_classes[vtop->r2] & rc2))
 #else
@@ -817,7 +819,7 @@ ST_FUNC int gv(int rc)
 #endif
         ) {
             r = get_reg(rc);
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
             if (((vtop->type.t & VT_BTYPE) == VT_QLONG)
                 || ((vtop->type.t & VT_BTYPE) == VT_QFLOAT)) {
                 int addr_type = VT_LLONG, load_size = 8,
@@ -831,7 +833,7 @@ ST_FUNC int gv(int rc)
                 original_type = vtop->type.t;
                 /* two register type load : expand to two words
                    temporarily */
-#ifndef TCC_TARGET_X86_64
+#if !defined(TCC_TARGET_ARM64) && !defined(TCC_TARGET_X86_64)
                 if ((vtop->r & (VT_VALMASK | VT_LVAL)) == VT_CONST) {
                     /* load constant */
                     ll = vtop->c.ull;
@@ -883,7 +885,7 @@ ST_FUNC int gv(int rc)
                 t1 = t;
                 /* compute memory access type */
                 if (vtop->r & VT_REF)
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
                     t = VT_PTR;
 #else
                     t = VT_INT;
@@ -945,6 +947,7 @@ ST_FUNC void gv2(int rc1, int rc2)
     }
 }
 
+#ifndef TCC_TARGET_ARM64
 /* wrapper around RC_FRET to return a register by type */
 static int rc_fret(int t)
 {
@@ -955,6 +958,7 @@ static int rc_fret(int t)
 #endif
     return RC_FRET;
 }
+#endif
 
 /* wrapper around REG_FRET to return a register by type */
 static int reg_fret(int t)
@@ -1140,7 +1144,7 @@ ST_FUNC int gvtst(int inv, int t)
     return gtst(inv, t);
 }
 
-#ifndef TCC_TARGET_X86_64
+#if !defined(TCC_TARGET_ARM64) && !defined(TCC_TARGET_X86_64)
 /* generate CPU independent (unsigned) long long operations */
 static void gen_opl(int op)
 {
@@ -1351,7 +1355,7 @@ static void gen_opl(int op)
 #elif defined(TCC_TARGET_ARM)
                 b = ind;
                 o(0x1A000000 | encbranch(ind, 0, 1));
-#elif defined(TCC_TARGET_C67)
+#elif defined(TCC_TARGET_C67) || defined(TCC_TARGET_ARM64)
                 tcc_error("not implemented");
 #else
 #error not supported
@@ -1552,7 +1556,8 @@ static void gen_opic(int op)
         general_case:
             if (!nocode_wanted) {
                 /* call low level op generator */
-                if (t1 == VT_LLONG || t2 == VT_LLONG)
+                if (t1 == VT_LLONG || t2 == VT_LLONG
+                    || (PTR_SIZE == 8 && (t1 == VT_PTR || t2 == VT_PTR)))
                     gen_opl(op);
                 else
                     gen_opi(op);
@@ -1723,7 +1728,7 @@ ST_FUNC void gen_op(int op)
         if (op >= TOK_ULT && op <= TOK_LOR) {
             check_comparison_pointer_types(vtop - 1, vtop, op);
             /* pointers are handled are unsigned */
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
             t = VT_LLONG | VT_UNSIGNED;
 #else
             t = VT_INT | VT_UNSIGNED;
@@ -1744,7 +1749,7 @@ ST_FUNC void gen_op(int op)
             vrott(3);
             gen_opic(op);
             /* set to integer type */
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
             vtop->type.t = VT_LLONG;
 #else
             vtop->type.t = VT_INT;
@@ -1768,7 +1773,7 @@ ST_FUNC void gen_op(int op)
                 u = pointed_size(&vtop[-1].type);
                 if (u < 0)
                     tcc_error("unknown array element size");
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
                 vpushll(u);
 #else
                 /* XXX: cast to int ? (long long case) */
@@ -1876,6 +1881,9 @@ ST_FUNC void gen_op(int op)
 /* generic itof for unsigned long long case */
 static void gen_cvt_itof1(int t)
 {
+#ifdef TCC_TARGET_ARM64
+    gen_cvt_itof(t);
+#else
     if ((vtop->type.t & (VT_BTYPE | VT_UNSIGNED)) == (VT_LLONG | VT_UNSIGNED)) {
         if (t == VT_FLOAT)
             vpush_global_sym(&func_old_type, TOK___floatundisf);
@@ -1892,12 +1900,16 @@ static void gen_cvt_itof1(int t)
     } else {
         gen_cvt_itof(t);
     }
+#endif
 }
 #endif
 
 /* generic ftoi for unsigned long long case */
 static void gen_cvt_ftoi1(int t)
 {
+#ifdef TCC_TARGET_ARM64
+    gen_cvt_ftoi(t);
+#else
     int st;
 
     if (t == (VT_LLONG | VT_UNSIGNED)) {
@@ -1919,6 +1931,7 @@ static void gen_cvt_ftoi1(int t)
     } else {
         gen_cvt_ftoi(t);
     }
+#endif
 }
 
 /* force char or short cast */
@@ -2009,7 +2022,7 @@ static void gen_cast(CType *type)
                     vtop->c.ll = vtop->c.ull;
                 else if (sbt & VT_UNSIGNED)
                     vtop->c.ll = vtop->c.ui;
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
                 else if (sbt == VT_PTR)
                     ;
 #endif
@@ -2020,7 +2033,7 @@ static void gen_cast(CType *type)
                     vtop->c.ull = vtop->c.ll;
                 else if (dbt == VT_BOOL)
                     vtop->c.i = (vtop->c.ll != 0);
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
                 else if (dbt == VT_PTR)
                     ;
 #endif
@@ -2064,7 +2077,7 @@ static void gen_cast(CType *type)
                         gen_cast(type);
                     }
                 }
-#ifndef TCC_TARGET_X86_64
+#if !defined(TCC_TARGET_ARM64) && !defined(TCC_TARGET_X86_64)
             } else if ((dbt & VT_BTYPE) == VT_LLONG) {
                 if ((sbt & VT_BTYPE) != VT_LLONG) {
                     /* scalar to long long */
@@ -2094,11 +2107,18 @@ static void gen_cast(CType *type)
                 if ((sbt & VT_BTYPE) != VT_LLONG && (sbt & VT_BTYPE) != VT_PTR
                     && (sbt & VT_BTYPE) != VT_FUNC) {
                     /* need to convert from 32bit to 64bit */
-                    int r = gv(RC_INT);
+                    gv(RC_INT);
                     if (sbt != (VT_INT | VT_UNSIGNED)) {
+#if defined(TCC_TARGET_ARM64)
+                        gen_cvt_sxtw();
+#elif defined(TCC_TARGET_X86_64)
+                        int r = gv(RC_INT);
                         /* x86_64 specific: movslq */
                         o(0x6348);
                         o(0xc0 + (REG_VALUE(r) << 3) + REG_VALUE(r));
+#else
+#error
+#endif
                     }
                 }
 #endif
@@ -2621,7 +2641,7 @@ ST_FUNC void vstore(void)
             if ((vtop[-1].r & VT_VALMASK) == VT_LLOCAL) {
                 SValue sv;
                 t = get_reg(RC_INT);
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
                 sv.type.t = VT_PTR;
 #else
                 sv.type.t = VT_INT;
@@ -2632,7 +2652,7 @@ ST_FUNC void vstore(void)
                 vtop[-1].r = t | VT_LVAL;
             }
             /* two word case handling : store second register at word + 4 (or +8 for x86-64)  */
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
             if (((ft & VT_BTYPE) == VT_QLONG) || ((ft & VT_BTYPE) == VT_QFLOAT)) {
                 int addr_type = VT_LLONG, load_size = 8,
                     load_type = ((vtop->type.t & VT_BTYPE) == VT_QLONG) ? VT_LLONG : VT_DOUBLE;
@@ -3119,6 +3139,13 @@ static int parse_btype(CType *type, AttributeDef *ad)
                 goto basic_type1;
             }
             break;
+#ifdef TCC_TARGET_ARM64
+        case TOK_UINT128:
+            /* GCC's __uint128_t appears in some Linux header files. Make it a
+               synonym for long double to get the size and alignment right. */
+            u = VT_LDOUBLE;
+            goto basic_type;
+#endif
         case TOK_BOOL:
             u = VT_BOOL;
             goto basic_type;
@@ -3254,7 +3281,7 @@ the_end:
 
     /* long is never used as type */
     if ((t & VT_BTYPE) == VT_LONG)
-#if !defined TCC_TARGET_X86_64 || defined TCC_TARGET_PE
+#if (!defined TCC_TARGET_X86_64 && !defined TCC_TARGET_ARM64) || defined TCC_TARGET_PE
         t = (t & ~VT_BTYPE) | VT_INT;
 #else
         t = (t & ~VT_BTYPE) | VT_LLONG;
@@ -3890,6 +3917,36 @@ tok_next:
     } break;
 #endif
 #endif
+
+#ifdef TCC_TARGET_ARM64
+    case TOK___va_start: {
+        next();
+        skip('(');
+        expr_eq();
+        skip(',');
+        expr_eq();
+        skip(')');
+        //xx check types
+        gen_va_start();
+        vpushi(0);
+        vtop->type.t = VT_VOID;
+        break;
+    }
+    case TOK___va_arg: {
+        CType type;
+        next();
+        skip('(');
+        expr_eq();
+        skip(',');
+        parse_type(&type);
+        skip(')');
+        //xx check types
+        gen_va_arg(&type);
+        vtop->type = type;
+        break;
+    }
+#endif
+
     case TOK_INC:
     case TOK_DEC:
         t = tok;
@@ -4078,6 +4135,15 @@ tok_next:
                 if (!ret_nregs) {
                     /* get some space for the returned structure */
                     size = type_size(&s->type, &align);
+#ifdef TCC_TARGET_ARM64
+                    /* On arm64, a small struct is return in registers.
+                   It is much easier to write it to memory if we know
+                   that we are allowed to write some extra bytes, so
+                   round the allocated space up to a power of 2: */
+                    if (size < 16)
+                        while (size & (size - 1))
+                            size = (size | (size - 1)) + 1;
+#endif
                     loc = (loc - size) & -align;
                     ret.type = s->type;
                     ret.r = VT_LOCAL | VT_LVAL;
@@ -4101,12 +4167,14 @@ tok_next:
                         ret.r2 = REG_QRET;
 #endif
                 } else {
+#ifndef TCC_TARGET_ARM64
 #ifdef TCC_TARGET_X86_64
                     if ((ret.type.t & VT_BTYPE) == VT_QLONG)
 #else
                     if ((ret.type.t & VT_BTYPE) == VT_LLONG)
 #endif
                         ret.r2 = REG_LRET;
+#endif
                     ret.r = REG_IRET;
                 }
                 ret.c.i = 0;
@@ -4718,6 +4786,10 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         if (tok != ';') {
             gexpr();
             gen_assign_cast(&func_vt);
+#ifdef TCC_TARGET_ARM64
+            // Perhaps it would be better to use this for all backends:
+            greturn();
+#else
             if ((func_vt.t & VT_BTYPE) == VT_STRUCT) {
                 CType type, ret_type;
                 int ret_align, ret_nregs;
@@ -4770,6 +4842,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
             } else {
                 gv(RC_IRET);
             }
+#endif
             vtop--; /* NOT vpop() because on x86 it would flush the fp stack */
         }
         skip(';');
@@ -5151,9 +5224,9 @@ static void init_putv(CType *type, Section *sec, unsigned long c, int v, int exp
         /* XXX: generate error if incorrect relocation */
         gen_assign_cast(&dtype);
         bt = type->t & VT_BTYPE;
-        /* we'll write at most 12 bytes */
-        if (c + 12 > sec->data_allocated) {
-            section_realloc(sec, c + 12);
+        /* we'll write at most 16 bytes */
+        if (c + 16 > sec->data_allocated) {
+            section_realloc(sec, c + 16);
         }
         ptr = sec->data + c;
         /* XXX: make code faster ? */
@@ -5171,6 +5244,9 @@ static void init_putv(CType *type, Section *sec, unsigned long c, int v, int exp
                 || bt == VT_LLONG || (bt == VT_INT && bit_size != 32)))
             tcc_error("initializer element is not computable at load time");
         switch (bt) {
+            /* XXX: when cross-compiling we assume that each type has the
+               same representation on host and target, which is likely to
+               be wrong in the case of long double */
         case VT_BOOL:
             vtop->c.i = (vtop->c.i != 0);
         case VT_BYTE:
@@ -5190,7 +5266,7 @@ static void init_putv(CType *type, Section *sec, unsigned long c, int v, int exp
             break;
         case VT_PTR: {
             addr_t val = (vtop->c.ptr_offset & bit_mask) << bit_pos;
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
             if (vtop->r & VT_SYM)
                 greloca(sec, vtop->sym, c, R_DATA_PTR, val);
             else
@@ -5204,7 +5280,7 @@ static void init_putv(CType *type, Section *sec, unsigned long c, int v, int exp
         }
         default: {
             int val = (vtop->c.i & bit_mask) << bit_pos;
-#ifdef TCC_TARGET_X86_64
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
             if (vtop->r & VT_SYM)
                 greloca(sec, vtop->sym, c, R_DATA_PTR, val);
             else
