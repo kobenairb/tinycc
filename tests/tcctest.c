@@ -1630,77 +1630,98 @@ float strtof(const char *nptr, char **endptr);
 LONG_DOUBLE strtold(const char *nptr, char **endptr);
 #endif
 
-#define FTEST(prefix, typename, type, fmt)                                        \
-    void prefix##cmp(type a, type b)                                              \
-    {                                                                             \
-        printf("%d %d %d %d %d %d\n", a == b, a != b, a<b, a> b, a >= b, a <= b); \
-        printf(fmt " " fmt " " fmt " " fmt " " fmt " " fmt " " fmt "\n",          \
-               a,                                                                 \
-               b,                                                                 \
-               a + b,                                                             \
-               a - b,                                                             \
-               a * b,                                                             \
-               a / b,                                                             \
-               -a);                                                               \
-        printf(fmt "\n", ++a);                                                    \
-        printf(fmt "\n", a++);                                                    \
-        printf(fmt "\n", a);                                                      \
-        b = 0;                                                                    \
-        printf("%d %d\n", !a, !b);                                                \
-    }                                                                             \
-    void prefix##fcast(type a)                                                    \
-    {                                                                             \
-        float fa;                                                                 \
-        double da;                                                                \
-        LONG_DOUBLE la;                                                           \
-        int ia;                                                                   \
-        unsigned int ua;                                                          \
-        type b;                                                                   \
-        fa = a;                                                                   \
-        da = a;                                                                   \
-        la = a;                                                                   \
-        printf("ftof: %f %f %Lf\n", fa, da, la);                                  \
-        ia = (int) a;                                                             \
-        ua = (unsigned int) a;                                                    \
-        printf("ftoi: %d %u\n", ia, ua);                                          \
-        ia = -1234;                                                               \
-        ua = 0x81234500;                                                          \
-        b = ia;                                                                   \
-        printf("itof: " fmt "\n", b);                                             \
-        b = ua;                                                                   \
-        printf("utof: " fmt "\n", b);                                             \
-    }                                                                             \
-                                                                                  \
-    float prefix##retf(type a)                                                    \
-    {                                                                             \
-        return a;                                                                 \
-    }                                                                             \
-    double prefix##retd(type a)                                                   \
-    {                                                                             \
-        return a;                                                                 \
-    }                                                                             \
-    LONG_DOUBLE prefix##retld(type a)                                             \
-    {                                                                             \
-        return a;                                                                 \
-    }                                                                             \
-                                                                                  \
-    void prefix##call(void)                                                       \
-    {                                                                             \
-        printf("float: " FLOAT_FMT, prefix##retf(42.123456789));                  \
-        printf("double: %f\n", prefix##retd(42.123456789));                       \
-        printf("long double: %Lf\n", prefix##retld(42.123456789));                \
-        printf("strto%s: %f\n", #prefix, (double) strto##prefix("1.2", NULL));    \
-    }                                                                             \
-                                                                                  \
-    void prefix##test(void)                                                       \
-    {                                                                             \
-        printf("testing '%s'\n", #typename);                                      \
-        prefix##cmp(1, 2.5);                                                      \
-        prefix##cmp(2, 1.5);                                                      \
-        prefix##cmp(1, 1);                                                        \
-        prefix##fcast(234.6);                                                     \
-        prefix##fcast(-2334.6);                                                   \
-        prefix##call();                                                           \
+#define FTEST(prefix, typename, type, fmt)                                                      \
+    void prefix##cmp(type a, type b)                                                            \
+    {                                                                                           \
+        printf("%d %d %d %d %d %d\n", a == b, a != b, a<b, a> b, a >= b, a <= b);               \
+        printf(fmt " " fmt " " fmt " " fmt " " fmt " " fmt " " fmt "\n",                        \
+               a,                                                                               \
+               b,                                                                               \
+               a + b,                                                                           \
+               a - b,                                                                           \
+               a * b,                                                                           \
+               a / b,                                                                           \
+               -a);                                                                             \
+        printf(fmt "\n", ++a);                                                                  \
+        printf(fmt "\n", a++);                                                                  \
+        printf(fmt "\n", a);                                                                    \
+        b = 0;                                                                                  \
+        printf("%d %d\n", !a, !b);                                                              \
+    }                                                                                           \
+    void prefix##fcast(type a)                                                                  \
+    {                                                                                           \
+        float fa;                                                                               \
+        double da;                                                                              \
+        LONG_DOUBLE la;                                                                         \
+        int ia;                                                                                 \
+        unsigned int ua;                                                                        \
+        type b;                                                                                 \
+        fa = a;                                                                                 \
+        da = a;                                                                                 \
+        la = a;                                                                                 \
+        printf("ftof: %f %f %Lf\n", fa, da, la);                                                \
+        ia = (int) a;                                                                           \
+        ua = (unsigned int) a;                                                                  \
+        printf("ftoi: %d %u\n", ia, ua);                                                        \
+        ia = -1234;                                                                             \
+        ua = 0x81234500;                                                                        \
+        b = ia;                                                                                 \
+        printf("itof: " fmt "\n", b);                                                           \
+        b = ua;                                                                                 \
+        printf("utof: " fmt "\n", b);                                                           \
+    }                                                                                           \
+                                                                                                \
+    float prefix##retf(type a)                                                                  \
+    {                                                                                           \
+        return a;                                                                               \
+    }                                                                                           \
+    double prefix##retd(type a)                                                                 \
+    {                                                                                           \
+        return a;                                                                               \
+    }                                                                                           \
+    LONG_DOUBLE prefix##retld(type a)                                                           \
+    {                                                                                           \
+        return a;                                                                               \
+    }                                                                                           \
+                                                                                                \
+    void prefix##call(void)                                                                     \
+    {                                                                                           \
+        printf("float: " FLOAT_FMT, prefix##retf(42.123456789));                                \
+        printf("double: %f\n", prefix##retd(42.123456789));                                     \
+        printf("long double: %Lf\n", prefix##retld(42.123456789));                              \
+        printf("strto%s: %f\n", #prefix, (double) strto##prefix("1.2", NULL));                  \
+    }                                                                                           \
+                                                                                                \
+    void prefix##signed_zeros(void)                                                             \
+    {                                                                                           \
+        type x = 0.0, y = -0.0, n, p;                                                           \
+        if (x == y)                                                                             \
+            printf("Test 1.0 / x != 1.0 / y  returns %d (should be 1).\n", 1.0 / x != 1.0 / y); \
+        else                                                                                    \
+            printf("x != y; this is wrong!\n");                                                 \
+                                                                                                \
+        n = -x;                                                                                 \
+        if (x == n)                                                                             \
+            printf("Test 1.0 / x != 1.0 / -x returns %d (should be 1).\n", 1.0 / x != 1.0 / n); \
+        else                                                                                    \
+            printf("x != -x; this is wrong!\n");                                                \
+                                                                                                \
+        p = +y;                                                                                 \
+        if (x == p)                                                                             \
+            printf("Test 1.0 / x != 1.0 / +y returns %d (should be 1).\n", 1.0 / x != 1.0 / p); \
+        else                                                                                    \
+            printf("x != +y; this is wrong!\n");                                                \
+    }                                                                                           \
+    void prefix##test(void)                                                                     \
+    {                                                                                           \
+        printf("testing '%s'\n", #typename);                                                    \
+        prefix##cmp(1, 2.5);                                                                    \
+        prefix##cmp(2, 1.5);                                                                    \
+        prefix##cmp(1, 1);                                                                      \
+        prefix##fcast(234.6);                                                                   \
+        prefix##fcast(-2334.6);                                                                 \
+        prefix##call();                                                                         \
+        prefix##signed_zeros();                                                                 \
     }
 
 FTEST(f, float, float, "%f")
