@@ -4880,6 +4880,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         b = gjmp(0);
         gsym(*case_sym);
         vseti(case_reg, 0);
+        vdup();
         vpushi(v1);
         if (v1 == v2) {
             gen_op(TOK_EQ);
@@ -4892,6 +4893,8 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
             gen_op(TOK_LE);
             *case_sym = gtst(1, *case_sym);
         }
+        case_reg = gv(RC_INT);
+        vpop();
         gsym(b);
         skip(':');
         is_expr = 0;
