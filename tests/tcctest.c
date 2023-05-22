@@ -1763,6 +1763,8 @@ arrtype2 sinit22 = {5, 6, 7};
 /* Address comparisons of non-weak symbols with zero can be const-folded */
 int sinit23[2] = {"astring" ? sizeof("astring") : -1, &sinit23 ? 42 : -1};
 
+extern int external_inited = 42;
+
 void init_test(void)
 {
     int linit1 = 2;
