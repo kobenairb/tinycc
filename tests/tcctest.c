@@ -2769,6 +2769,15 @@ unsigned long mconstraint_test(struct struct1231 *r)
     return ret + a[0];
 }
 
+#ifdef __x86_64__
+int fls64(unsigned long long x)
+{
+    int bitpos = -1;
+    asm("bsrq %1,%q0" : "+r"(bitpos) : "rm"(x));
+    return bitpos + 1;
+}
+#endif
+
 unsigned int set;
 
 void asm_test(void)

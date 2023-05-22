@@ -913,7 +913,7 @@ static void subst_asm_operands(
             }
             modifier = 0;
             if (*str == 'c' || *str == 'n' || *str == 'b' || *str == 'w' || *str == 'h'
-                || *str == 'k')
+                || *str == 'k' || *str == 'q')
                 modifier = *str++;
             index = find_constraint(operands, nb_operands, str, &str);
             if (index < 0)
