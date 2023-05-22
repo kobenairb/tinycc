@@ -20,7 +20,6 @@
 
 #include "tcc.h"
 #ifdef CONFIG_TCC_ASM
-
 ST_FUNC int asm_get_local_label_name(TCCState *s1, unsigned int n)
 {
     char buf[64];
@@ -676,36 +675,10 @@ static int tcc_assemble_internal(TCCState *s1, int do_preprocess)
 {
     int opcode;
 
-#if 0
+#ifdef PRINTF_ASM_CODE
+    ST_FUNC void printf_asm_opcode();
     /* print stats about opcodes */
-    {
-        const ASMInstr *pa;
-        int freq[4];
-        int op_vals[500];
-        int nb_op_vals, i, j;
-
-        nb_op_vals = 0;
-        memset(freq, 0, sizeof(freq));
-        for(pa = asm_instrs; pa->sym != 0; pa++) {
-            freq[pa->nb_ops]++;
-            for(i=0;i<pa->nb_ops;i++) {
-                for(j=0;j<nb_op_vals;j++) {
-                    if (pa->op_type[i] == op_vals[j])
-                        goto found;
-                }
-                op_vals[nb_op_vals++] = pa->op_type[i];
-            found: ;
-            }
-        }
-        for(i=0;i<nb_op_vals;i++) {
-            int v = op_vals[i];
-            if ((v & (v - 1)) != 0)
-                printf("%3d: %08x\n", i, v);
-        }
-        printf("size=%d nb=%d f0=%d f1=%d f2=%d f3=%d\n",
-               sizeof(asm_instrs), sizeof(asm_instrs) / sizeof(ASMInstr),
-               freq[0], freq[1], freq[2], freq[3]);
-    }
+    printf_asm_opcode();
 #endif
 
     /* XXX: undefine C labels */
