@@ -717,8 +717,9 @@ struct TCCState
         LINE_MACRO_OUTPUT_FORMAT_GCC,
         LINE_MACRO_OUTPUT_FORMAT_NONE,
         LINE_MACRO_OUTPUT_FORMAT_STD
-    } Pflag;   /* -P switch */
-    int dflag; /* -dX value */
+    } Pflag;    /* -P switch */
+    char dflag; /* -dX value */
+    FILE *dffp;
 
     /* for -MD/-MF: collected dependencies for this compilation */
     char **target_deps;
