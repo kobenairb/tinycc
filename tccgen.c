@@ -1383,8 +1383,7 @@ static void gen_opic(int op)
             }
             goto general_case;
         } else if (c2 && (op == '+' || op == '-')
-                   && (((vtop[-1].r & (VT_VALMASK | VT_LVAL | VT_SYM)) == (VT_CONST | VT_SYM)
-                        && !(vtop[-1].sym->type.t & VT_IMPORT))
+                   && (((vtop[-1].r & (VT_VALMASK | VT_LVAL | VT_SYM)) == (VT_CONST | VT_SYM))
                        || (vtop[-1].r & (VT_VALMASK | VT_LVAL)) == VT_LOCAL)) {
             /* symbol + constant case */
             if (op == '-')
@@ -2995,7 +2994,7 @@ static void post_type(CType *type, AttributeDef *ad)
                     type_decl(&pt, &ad1, &n, TYPE_DIRECT | TYPE_ABSTRACT);
                     if ((pt.t & VT_BTYPE) == VT_VOID)
                         error("parameter declared as void");
-                    arg_size += (type_size(&pt, &align) + 3) & ~3;
+                    arg_size += (type_size(&pt, &align) + PTR_SIZE - 1) / PTR_SIZE;
                 } else {
                 old_proto:
                     n = tok;
@@ -5251,6 +5250,12 @@ ST_FUNC void decl(int l)
                     func_decl_list(sym);
             }
 
+#ifdef TCC_TARGET_PE
+            if (ad.func_import)
+                type.t |= VT_IMPORT;
+            if (ad.func_export)
+                type.t |= VT_EXPORT;
+#endif
             if (tok == '{') {
                 if (l == VT_LOCAL)
                     error("cannot use local functions");
@@ -5366,10 +5371,6 @@ ST_FUNC void decl(int l)
                         /* NOTE: as GCC, uninitialized global static
                            arrays of null size are considered as
                            extern */
-#ifdef TCC_TARGET_PE
-                        if (ad.func_import)
-                            type.t |= VT_IMPORT;
-#endif
                         external_sym(v, &type, r);
                     } else {
                         type.t |= (btype.t & VT_STATIC); /* Retain "static". */
@@ -5379,10 +5380,6 @@ ST_FUNC void decl(int l)
                             r |= l;
                         if (has_init)
                             next();
-#ifdef TCC_TARGET_PE
-                        if (ad.func_export)
-                            type.t |= VT_EXPORT;
-#endif
                         decl_initializer_alloc(&type, &ad, r, has_init, v, l);
                     }
                 }
