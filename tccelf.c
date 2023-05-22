@@ -1026,7 +1026,7 @@ static void put_got_entry(TCCState *s1, int reloc_type, unsigned long size, int 
 /* build GOT and PLT entries */
 ST_FUNC void build_got_entries(TCCState *s1)
 {
-    Section *s, *symtab;
+    Section *s;
     ElfW_Rel *rel, *rel_end;
     ElfW(Sym) * sym;
     int i, type, reloc_type, sym_index;
@@ -1038,7 +1038,6 @@ ST_FUNC void build_got_entries(TCCState *s1)
         /* no need to handle got relocations */
         if (s->link != symtab_section)
             continue;
-        symtab = s->link;
         rel_end = (ElfW_Rel *) (s->data + s->data_offset);
         for (rel = (ElfW_Rel *) s->data; rel < rel_end; rel++) {
             type = ELFW(R_TYPE)(rel->r_info);
@@ -1463,7 +1462,9 @@ static int elf_output_file(TCCState *s1, const char *filename)
     ElfW(Sym) * sym;
     int type, file_type;
     unsigned long rel_addr, rel_size;
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
     unsigned long bss_addr, bss_size;
+#endif
 
     file_type = s1->output_type;
     s1->nb_errors = 0;
@@ -1799,7 +1800,9 @@ static int elf_output_file(TCCState *s1, const char *filename)
         rel_size = 0;
         rel_addr = 0;
 
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
         bss_addr = bss_size = 0;
+#endif
         /* leave one program header for the program interpreter */
         ph = &phdr[0];
         if (interp)
