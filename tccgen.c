@@ -5342,30 +5342,11 @@ static int is_label(void)
     last_tok = tok;
     next();
     if (tok == ':') {
-        next();
         return last_tok;
     } else {
         unget_tok(last_tok);
         return 0;
     }
-}
-
-static void label_or_decl(int l)
-{
-    int last_tok;
-
-    /* fast test first */
-    if (tok >= TOK_UIDENT) {
-        /* no need to save tokc because tok is an identifier */
-        last_tok = tok;
-        next();
-        if (tok == ':') {
-            unget_tok(last_tok);
-            return;
-        }
-        unget_tok(last_tok);
-    }
-    decl(l);
 }
 
 #ifndef TCC_TARGET_ARM64
@@ -5591,7 +5572,10 @@ static void block(int *bsym, int *csym, int is_expr)
             }
         }
         while (tok != '}') {
-            label_or_decl(VT_LOCAL);
+            if ((a = is_label()))
+                unget_tok(a);
+            else
+                decl(VT_LOCAL);
             if (tok != '}') {
                 if (is_expr)
                     vpop();
@@ -5813,6 +5797,7 @@ static void block(int *bsym, int *csym, int is_expr)
         b = is_label();
         if (b) {
             /* label case */
+            next();
             s = label_find(b);
             if (s) {
                 if (s->r == LABEL_DEFINED)
