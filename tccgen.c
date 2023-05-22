@@ -87,7 +87,6 @@ static void decl_initializer_alloc(
     CType *type, AttributeDef *ad, int r, int has_init, int v, int scope);
 static int decl0(int l, int is_for_loop_init);
 static void expr_eq(void);
-static void expr_lor_const(void);
 static void unary_type(CType *type);
 static void vla_runtime_type_size(CType *type, int *a);
 static void vla_sp_restore(void);
@@ -4508,10 +4507,8 @@ tok_next:
         skip('(');
         expr_eq();
         skip(',');
-        nocode_wanted++;
-        expr_lor_const();
+        expr_eq();
         vpop();
-        nocode_wanted--;
         skip(')');
     } break;
     case TOK_builtin_types_compatible_p: {
@@ -4556,7 +4553,7 @@ tok_next:
         next();
         skip('(');
         nocode_wanted++;
-        gexpr();
+        expr_eq();
         res = (vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
         vpop();
         nocode_wanted--;
@@ -5033,26 +5030,6 @@ static void expr_or(void)
         next();
         expr_xor();
         gen_op('|');
-    }
-}
-
-/* XXX: fix this mess */
-static void expr_land_const(void)
-{
-    expr_or();
-    while (tok == TOK_LAND) {
-        next();
-        expr_or();
-        gen_op(TOK_LAND);
-    }
-}
-static void expr_lor_const(void)
-{
-    expr_land_const();
-    while (tok == TOK_LOR) {
-        next();
-        expr_land_const();
-        gen_op(TOK_LOR);
     }
 }
 
