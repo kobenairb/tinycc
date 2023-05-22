@@ -66,7 +66,8 @@ ST_DATA struct switch_t
 {
     struct case_t
     {
-        int v1, v2, sym;
+        int64_t v1, v2;
+        int sym;
     } **p;
     int n;       /* list of case ranges */
     int def_sym; /* default symbol */
@@ -92,6 +93,7 @@ static void vla_sp_restore(void);
 static void vla_sp_restore_root(void);
 static int is_compatible_parameter_types(CType *type1, CType *type2);
 static void expr_type(CType *type);
+static inline int64_t expr_const64(void);
 ST_FUNC void vpush64(int ty, unsigned long long v);
 ST_FUNC void vpush(CType *type);
 ST_FUNC int gvtst(int inv, int t);
@@ -436,7 +438,7 @@ ST_INLN Sym *sym_find(int v)
 }
 
 /* push a given symbol on the symbol stack */
-ST_FUNC Sym *sym_push(int v, CType *type, int r, int c)
+ST_FUNC Sym *sym_push(int v, CType *type, int r, long c)
 {
     Sym *s, **ps;
     TokenSym *ts;
@@ -467,7 +469,7 @@ ST_FUNC Sym *sym_push(int v, CType *type, int r, int c)
 }
 
 /* push a global identifier */
-ST_FUNC Sym *global_identifier_push(int v, int t, int c)
+ST_FUNC Sym *global_identifier_push(int v, int t, long c)
 {
     Sym *s, **ps;
     s = sym_push2(&global_stack, v, t, c);
@@ -698,7 +700,7 @@ ST_FUNC void vpush_global_sym(CType *type, int v)
     vpushsym(type, external_global_sym(v, type, 0));
 }
 
-ST_FUNC void vset(CType *type, int r, int v)
+ST_FUNC void vset(CType *type, int r, long v)
 {
     CValue cval;
 
@@ -1754,6 +1756,8 @@ static void gen_opic(int op)
         default:
             goto general_case;
         }
+        if (t1 != VT_LLONG && (PTR_SIZE != 8 || t1 != VT_PTR))
+            l1 = ((uint32_t) l1 | (v1->type.t & VT_UNSIGNED ? 0 : -(l1 & 0x80000000)));
         v1->c.i = l1;
         vtop--;
     } else {
@@ -3274,7 +3278,8 @@ static Sym *find_field(CType *type, int v)
 /* enum/struct/union declaration. u is either VT_ENUM or VT_STRUCT */
 static void struct_decl(CType *type, AttributeDef *ad, int u)
 {
-    int a, v, size, align, maxalign, c, offset, flexible, extra_bytes;
+    int a, v, size, align, maxalign, offset, flexible, extra_bytes;
+    long c;
     int bit_size, bit_pos, bsize, bt, lbit_pos, prevbt;
     Sym *s, *ss, *ass, **ps;
     AttributeDef ad1;
@@ -3319,7 +3324,9 @@ do_decl:
         /* non empty enums are not allowed */
         if (a == TOK_ENUM) {
             int seen_neg = 0;
+            int seen_wide = 0;
             for (;;) {
+                CType *t = &int_type;
                 v = tok;
                 if (v < TOK_UIDENT)
                     expect("identifier");
@@ -3329,12 +3336,23 @@ do_decl:
                 next();
                 if (tok == '=') {
                     next();
+#if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
+                    c = expr_const64();
+#else
+                    /* We really want to support long long enums
+               on i386 as well, but the Sym structure only
+               holds a 'long' for associated constants,
+               and enlarging it would bump its size (no
+               available padding).  So punt for now.  */
                     c = expr_const();
+#endif
                 }
                 if (c < 0)
                     seen_neg = 1;
+                if (c != (int) c && (unsigned long) c != (unsigned int) c)
+                    seen_wide = 1, t = &size_type;
                 /* enum symbols have static storage */
-                ss = sym_push(v, &int_type, VT_CONST, c);
+                ss = sym_push(v, t, VT_CONST, c);
                 ss->type.t |= VT_STATIC;
                 if (tok != ',')
                     break;
@@ -3346,7 +3364,7 @@ do_decl:
             }
             if (!seen_neg)
                 s->a.unsigned_enum = 1;
-            s->c = type_size(&int_type, &align);
+            s->c = type_size(seen_wide ? &size_type : &int_type, &align);
             skip('}');
         } else {
             maxalign = 1;
@@ -4360,10 +4378,11 @@ tok_next:
         vpushi(is_compatible_types(&type1, &type2));
     } break;
     case TOK_builtin_choose_expr: {
-        int saved_nocode_wanted, c;
+        int saved_nocode_wanted;
+        int64_t c;
         next();
         skip('(');
-        c = expr_const();
+        c = expr_const64();
         skip(',');
         if (!c) {
             saved_nocode_wanted = nocode_wanted;
@@ -5257,14 +5276,26 @@ static void expr_const1(void)
 }
 
 /* parse an integer constant and return its value. */
-ST_FUNC int expr_const(void)
+static inline int64_t expr_const64(void)
 {
-    int c;
+    int64_t c;
     expr_const1();
     if ((vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) != VT_CONST)
         expect("constant expression");
     c = vtop->c.i;
     vpop();
+    return c;
+}
+
+/* parse an integer constant and return its value.
+   Complain if it doesn't fit 32bit (signed or unsigned).  */
+ST_FUNC int expr_const(void)
+{
+    int c;
+    int64_t wc = expr_const64();
+    c = wc;
+    if (c != wc && (unsigned) c != wc)
+        tcc_error("constant exceeds 32 bit");
     return c;
 }
 
@@ -5309,34 +5340,36 @@ static void label_or_decl(int l)
 
 static int case_cmp(const void *pa, const void *pb)
 {
-    int a = (*(struct case_t **) pa)->v1;
-    int b = (*(struct case_t **) pb)->v1;
+    int64_t a = (*(struct case_t **) pa)->v1;
+    int64_t b = (*(struct case_t **) pb)->v1;
     return a < b ? -1 : a > b;
 }
 
-static int gcase(struct case_t **base, int len, int case_reg, int *bsym)
+static void gcase(struct case_t **base, int len, int *bsym)
 {
     struct case_t *p;
     int e;
+    int ll = (vtop->type.t & VT_BTYPE) == VT_LLONG;
+    gv(RC_INT);
     while (len > 4) {
         /* binary search */
         p = base[len / 2];
-        vseti(case_reg, 0);
         vdup();
-        vpushi(p->v2);
+        if (ll)
+            vpushll(p->v2);
+        else
+            vpushi(p->v2);
         gen_op(TOK_LE);
         e = gtst(1, 0);
-        case_reg = gv(RC_INT);
-        vpop();
-        vseti(case_reg, 0);
         vdup();
-        vpushi(p->v1);
+        if (ll)
+            vpushll(p->v1);
+        else
+            vpushi(p->v1);
         gen_op(TOK_GE);
         gtst_addr(0, p->sym); /* v1 <= x <= v2 */
-        case_reg = gv(RC_INT);
-        vpop();
         /* x < v1 */
-        case_reg = gcase(base, len / 2, case_reg, bsym);
+        gcase(base, len / 2, bsym);
         if (cur_switch->def_sym)
             gjmp_addr(cur_switch->def_sym);
         else
@@ -5350,28 +5383,27 @@ static int gcase(struct case_t **base, int len, int case_reg, int *bsym)
     /* linear scan */
     while (len--) {
         p = *base++;
-        vseti(case_reg, 0);
         vdup();
-        vpushi(p->v2);
+        if (ll)
+            vpushll(p->v2);
+        else
+            vpushi(p->v2);
         if (p->v1 == p->v2) {
             gen_op(TOK_EQ);
             gtst_addr(0, p->sym);
         } else {
             gen_op(TOK_LE);
             e = gtst(1, 0);
-            case_reg = gv(RC_INT);
-            vpop();
-            vseti(case_reg, 0);
             vdup();
-            vpushi(p->v1);
+            if (ll)
+                vpushll(p->v1);
+            else
+                vpushi(p->v1);
             gen_op(TOK_GE);
             gtst_addr(0, p->sym);
             gsym(e);
         }
-        case_reg = gv(RC_INT);
-        vpop();
     }
-    return case_reg;
 }
 
 static void block(int *bsym, int *csym, int is_expr)
@@ -5655,13 +5687,12 @@ static void block(int *bsym, int *csym, int is_expr)
     } else if (tok == TOK_SWITCH) {
         struct switch_t *saved, sw;
         int saved_nocode_wanted = nocode_wanted;
+        SValue switchval;
         next();
         skip('(');
         gexpr();
-        /* XXX: other types than integer */
-        c = gv(RC_INT);
-        vpop();
         skip(')');
+        switchval = *vtop--;
         a = 0;
         b = gjmp(0); /* jump to first case */
         sw.p = NULL;
@@ -5679,7 +5710,13 @@ static void block(int *bsym, int *csym, int is_expr)
             for (b = 1; b < sw.n; b++)
                 if (sw.p[b - 1]->v2 >= sw.p[b]->v1)
                     tcc_error("duplicate case value");
-            gcase(sw.p, sw.n, c, &a);
+            /* Our switch table sorting is signed, so the compared
+           value needs to be as well when it's 64bit.  */
+            if ((switchval.type.t & VT_BTYPE) == VT_LLONG)
+                switchval.type.t &= ~VT_UNSIGNED;
+            vpushv(&switchval);
+            gcase(sw.p, sw.n, &a);
+            vpop();
             if (sw.def_sym)
                 gjmp_addr(sw.def_sym);
         }
@@ -5693,10 +5730,10 @@ static void block(int *bsym, int *csym, int is_expr)
             expect("switch");
         nocode_wanted &= ~2;
         next();
-        cr->v1 = cr->v2 = expr_const();
+        cr->v1 = cr->v2 = expr_const64();
         if (gnu_ext && tok == TOK_DOTS) {
             next();
-            cr->v2 = expr_const();
+            cr->v2 = expr_const64();
             if (cr->v2 < cr->v1)
                 tcc_warning("empty case range");
         }
