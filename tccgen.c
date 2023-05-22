@@ -3887,13 +3887,17 @@ tok_next:
         skip(')');
         vpushi(res);
     } break;
-    case TOK_builtin_frame_address: {
+    case TOK_builtin_frame_address:
+    case TOK_builtin_return_address: {
+        int tok1 = tok;
         int level;
         CType type;
         next();
         skip('(');
         if (tok != TOK_CINT || tokc.i < 0) {
-            tcc_error("__builtin_frame_address only takes positive integers");
+            tcc_error("%s only takes positive integers",
+                      tok1 == TOK_builtin_return_address ? "__builtin_return_address"
+                                                         : "__builtin_frame_address");
         }
         level = tokc.i;
         next();
@@ -3904,6 +3908,13 @@ tok_next:
         while (level--) {
             mk_pointer(&vtop->type);
             indir(); /* -> parent frame */
+        }
+        if (tok1 == TOK_builtin_return_address) {
+            // assume return address is just above frame pointer on stack
+            vpushi(PTR_SIZE);
+            gen_op('+');
+            mk_pointer(&vtop->type);
+            indir();
         }
     } break;
 #ifdef TCC_TARGET_X86_64
