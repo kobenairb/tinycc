@@ -3317,6 +3317,11 @@ redo:
             goto parse_name;
         }
         break;
+    case '\\':
+        ch = handle_eob();
+        if (ch != '\\')
+            goto redo;
+        /* fall through */
     /* case 'a' ... 'z': */
     case 'a':
     case 'b':
@@ -3372,7 +3377,6 @@ redo:
     case 'Y':
     case 'Z':
     case '_':
-    case '\\':
     case '.':
     case '$':
     case '~':
@@ -3502,7 +3506,6 @@ ST_FUNC int tcc_load_ldscript(TCCState *s1)
     char filename[1024];
     int t, ret;
 
-    ch = file->buf_ptr[0];
     ch = handle_eob();
     for (;;) {
         t = ld_next(s1, cmd, sizeof(cmd));
