@@ -158,6 +158,8 @@ static const char version[] = "tcc version " TCC_VERSION " ("
                               " Windows"
 #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
                               " FreeBSD"
+#elif defined(__APPLE__)
+                              " Darwin"
 #else
                               " Linux"
 #endif
