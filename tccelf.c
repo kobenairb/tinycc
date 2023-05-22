@@ -1888,7 +1888,8 @@ static void tcc_output_elf(
     ehdr.e_ident[4] = ELFCLASSW;
     ehdr.e_ident[5] = ELFDATA2LSB;
     ehdr.e_ident[6] = EV_CURRENT;
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#if !defined(TCC_TARGET_PE) && (defined(__FreeBSD__) || defined(__FreeBSD_kernel__))
+    /* FIXME: should set only for freebsd _target_, but we exclude only PE target */
     ehdr.e_ident[EI_OSABI] = ELFOSABI_FREEBSD;
 #endif
 #ifdef TCC_TARGET_ARM
