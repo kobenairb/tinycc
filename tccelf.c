@@ -1023,7 +1023,7 @@ static void put_got_entry(TCCState *s1, int reloc_type, unsigned long size, int 
 
     /* if a got entry already exists for that symbol, no need to add one */
     if (sym_index < s1->nb_sym_attrs && s1->sym_attrs[sym_index].got_offset) {
-        if (!need_plt_entry)
+        if (!need_plt_entry || s1->sym_attrs[sym_index].has_plt_entry)
             return;
         else
             got_entry_present = 1;
@@ -1034,9 +1034,6 @@ static void put_got_entry(TCCState *s1, int reloc_type, unsigned long size, int 
     if (s1->dynsym) {
         sym = &((ElfW(Sym) *) symtab_section->data)[sym_index];
         name = (char *) symtab_section->link->data + sym->st_name;
-        if (s1->sym_attrs[sym_index].has_plt_entry)
-            return;
-        s1->sym_attrs[sym_index].has_plt_entry = 1;
         offset = sym->st_value;
 #if defined(TCC_TARGET_I386) || defined(TCC_TARGET_X86_64)
         if (need_plt_entry) {
@@ -1082,6 +1079,7 @@ static void put_got_entry(TCCState *s1, int reloc_type, unsigned long size, int 
             if (s1->output_type == TCC_OUTPUT_EXE)
 #endif
                 offset = plt->data_offset - 16;
+            s1->sym_attrs[sym_index].has_plt_entry = 1;
         }
 #elif defined(TCC_TARGET_ARM)
         if (need_plt_entry) {
@@ -1119,6 +1117,7 @@ static void put_got_entry(TCCState *s1, int reloc_type, unsigned long size, int 
                the PLT */
             if (s1->output_type == TCC_OUTPUT_EXE)
                 offset = plt->data_offset - 16;
+            s1->sym_attrs[sym_index].has_plt_entry = 1;
         }
 #elif defined(TCC_TARGET_C67)
         tcc_error("C67 got not implemented");
