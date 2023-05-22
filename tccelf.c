@@ -676,7 +676,8 @@ static void sort_syms(TCCState *s1, Section *s)
         p++;
     }
     /* save the number of local symbols in section header */
-    s->sh_info = q - new_syms;
+    if (s->sh_size) /* this 'if' makes IDA happy */
+        s->sh_info = q - new_syms;
 
     /* then second pass for non local symbols */
     p = (ElfW(Sym) *) s->data;
@@ -2046,10 +2047,12 @@ static void tidy_section_headers(TCCState *s1, int *sec_order)
                                                          && sym->st_shndx < SHN_LORESERVE)
         sym->st_shndx
         = backmap[sym->st_shndx];
-    for_each_elem(s1->dynsym, 1, sym, ElfW(Sym)) if (sym->st_shndx != SHN_UNDEF
-                                                     && sym->st_shndx < SHN_LORESERVE) sym->st_shndx
-        = backmap[sym->st_shndx];
-
+    if (!s1->static_link) {
+        for_each_elem(s1->dynsym, 1, sym, ElfW(Sym)) if (sym->st_shndx != SHN_UNDEF
+                                                         && sym->st_shndx < SHN_LORESERVE)
+            sym->st_shndx
+            = backmap[sym->st_shndx];
+    }
     for (i = 0; i < s1->nb_sections; i++)
         sec_order[i] = i;
     tcc_free(s1->sections);
