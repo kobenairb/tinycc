@@ -1839,6 +1839,7 @@ void funcptr_test()
         int dummy;
         void (*func)(int);
     } st1;
+    long diff;
 
     printf("funcptr:\n");
     func = &num;
@@ -1854,6 +1855,12 @@ void funcptr_test()
     printf("sizeof2 = %d\n", sizeof funcptr_test);
     printf("sizeof3 = %d\n", sizeof(&funcptr_test));
     printf("sizeof4 = %d\n", sizeof &funcptr_test);
+    a = 0;
+    func = num + a;
+    diff = func - num;
+    func(42);
+    (func + diff)(42);
+    (num + a)(43);
 }
 
 void lloptest(long long a, long long b)
