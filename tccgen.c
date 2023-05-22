@@ -93,6 +93,10 @@ static void vla_runtime_type_size(CType *type, int *a);
 static void vla_sp_save(void);
 static int is_compatible_parameter_types(CType *type1, CType *type2);
 static void expr_type(CType *type);
+ST_FUNC void vpush64(int ty, unsigned long long v);
+ST_FUNC void vpush(CType *type);
+ST_FUNC int gvtst(int inv, int t);
+ST_FUNC int is_btype_size(int bt);
 
 ST_INLN int is_float(int t)
 {
@@ -330,7 +334,7 @@ static void vsetc(CType *type, int r, CValue *vc)
 }
 
 /* push constant of type "type" with useless value */
-void vpush(CType *type)
+ST_FUNC void vpush(CType *type)
 {
     CValue cval;
     vsetc(type, VT_CONST, &cval);
@@ -353,7 +357,7 @@ static void vpushs(addr_t v)
 }
 
 /* push arbitrary 64bit constant */
-void vpush64(int ty, unsigned long long v)
+ST_FUNC void vpush64(int ty, unsigned long long v)
 {
     CValue cval;
     CType ctype;
@@ -1090,7 +1094,7 @@ static void gv_dup(void)
 /* Generate value test
  *
  * Generate a test for any value (jump, comparison and integers) */
-int gvtst(int inv, int t)
+ST_FUNC int gvtst(int inv, int t)
 {
     int v = vtop->r & VT_VALMASK;
     if (v != VT_CMP && v != VT_JMP && v != VT_JMPI) {
@@ -3008,7 +3012,7 @@ do_decl:
 }
 
 /* return 1 if basic type is a type size (short, long, long long) */
-int is_btype_size(int bt)
+ST_FUNC int is_btype_size(int bt)
 {
     return bt == VT_SHORT || bt == VT_LONG || bt == VT_LLONG;
 }
