@@ -4170,6 +4170,8 @@ tok_next:
             if (tok == TOK_CDOUBLE)
                 expect("field name");
             next();
+            if (tok == TOK_CINT || tok == TOK_CUINT)
+                expect("field name");
             s = vtop->type.ref;
             /* find field */
             tok |= SYM_FIELD;
