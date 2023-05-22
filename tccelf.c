@@ -1343,6 +1343,8 @@ ST_FUNC void tcc_add_linker_symbols(TCCState *s1)
 /* name of ELF interpreter */
 #if defined __FreeBSD__
 static const char elf_interp[] = "/libexec/ld-elf.so.1";
+#elif defined __FreeBSD_kernel__
+static char elf_interp[] = "/lib/ld.so.1";
 #elif defined TCC_ARM_EABI
 static const char elf_interp[] = "/lib/ld-linux.so.3";
 #elif defined(TCC_TARGET_X86_64)
@@ -1377,7 +1379,7 @@ static void tcc_output_binary(TCCState *s1, FILE *f, const int *section_order)
     }
 }
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #define HAVE_PHDR 1
 #define EXTRA_RELITEMS 14
 
@@ -1858,7 +1860,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
                     }
                     /* update dynamic relocation infos */
                     if (s->sh_type == SHT_RELX) {
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
                         if (!strcmp(strsec->data + s->sh_name, ".rel.got")) { // rel_size == 0) {
                             rel_addr = addr;
                             rel_size += s->sh_size; // XXX only first rel.
@@ -1898,7 +1900,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
         if (interp) {
             ph = &phdr[0];
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
             {
                 int len = phnum * sizeof(ElfW(Phdr));
 
@@ -2011,7 +2013,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
             put_dt(dynamic, DT_RELASZ, rel_size);
             put_dt(dynamic, DT_RELAENT, sizeof(ElfW_Rel));
 #else
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
             put_dt(dynamic, DT_PLTGOT, s1->got->sh_addr);
             put_dt(dynamic, DT_PLTRELSZ, rel_size);
             put_dt(dynamic, DT_JMPREL, rel_addr);
@@ -2117,7 +2119,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
         ehdr.e_ident[4] = TCC_ELFCLASS;
         ehdr.e_ident[5] = ELFDATA2LSB;
         ehdr.e_ident[6] = EV_CURRENT;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
         ehdr.e_ident[EI_OSABI] = ELFOSABI_FREEBSD;
 #endif
 #ifdef TCC_TARGET_ARM
@@ -2155,7 +2157,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
         for (i = 1; i < s1->nb_sections; i++) {
             s = s1->sections[section_order[i]];
             if (s->sh_type != SHT_NOBITS) {
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
                 if (s->sh_type == SHT_DYNSYM)
                     patch_dynsym_undef(s1, s);
 #endif
