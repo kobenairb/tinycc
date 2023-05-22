@@ -765,13 +765,14 @@ struct TCCState
     struct filespec **files; /* files seen on command line */
     int nb_files;            /* number thereof */
     int nb_libraries;        /* number of libs thereof */
-    char *outfile;           /* output filename */
-    char *option_m;          /* only -m32/-m64 handled */
-    int print_search_dirs;   /* option */
-    int option_r;            /* option -r */
-    int do_bench;            /* option -bench */
-    int gen_deps;            /* option -MD  */
-    char *deps_outfile;      /* option -MF */
+    int filetype;
+    char *outfile;         /* output filename */
+    char *option_m;        /* only -m32/-m64 handled */
+    int print_search_dirs; /* option */
+    int option_r;          /* option -r */
+    int do_bench;          /* option -bench */
+    int gen_deps;          /* option -MD  */
+    char *deps_outfile;    /* option -MF */
 
     int args_pthread;   /* -pthread option */
     CString linker_arg; /* collect -Wl options for input such as "-Wl,-rpath -Wl,<path>" */
@@ -1086,10 +1087,6 @@ ST_DATA int tcc_ext;
 /* XXX: get rid of this ASAP */
 ST_DATA struct TCCState *tcc_state;
 
-#define AFF_PRINT_ERROR 0x0001    /* print error if file not found */
-#define AFF_REFERENCED_DLL 0x0002 /* load a referenced dll from another dll */
-#define AFF_PREPROCESS 0x0004     /* preprocess file */
-
 /* public functions currently used by the tcc main function */
 ST_FUNC char *pstrcpy(char *buf, int buf_size, const char *s);
 ST_FUNC char *pstrcat(char *buf, int buf_size, const char *s);
@@ -1161,7 +1158,19 @@ ST_FUNC void tcc_open_bf(TCCState *s1, const char *filename, int initlen);
 ST_FUNC int tcc_open(TCCState *s1, const char *filename);
 ST_FUNC void tcc_close(void);
 
-ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags, int filetype);
+ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags);
+/* flags: */
+#define AFF_PRINT_ERROR 0x10    /* print error if file not found */
+#define AFF_REFERENCED_DLL 0x20 /* load a referenced dll from another dll */
+#define AFF_PREPROCESS 0x40     /* preprocess file */
+/* combined with: */
+#define AFF_TYPE_NONE 0
+#define AFF_TYPE_C 1
+#define AFF_TYPE_ASM 2
+#define AFF_TYPE_ASMPP 3
+#define AFF_TYPE_BIN 4
+#define AFF_TYPE_LIB 5
+
 ST_FUNC int tcc_add_crt(TCCState *s, const char *filename);
 
 #ifndef TCC_TARGET_PE

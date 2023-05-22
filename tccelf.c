@@ -1569,8 +1569,7 @@ static int tcc_add_support(TCCState *s1, const char *filename)
 #endif
              ,
              filename);
-
-    return tcc_add_file(s1, buf, TCC_FILETYPE_BINARY);
+    return tcc_add_file(s1, buf);
 }
 
 ST_FUNC void tcc_add_bcheck(TCCState *s1)
@@ -1626,7 +1625,7 @@ ST_FUNC void tcc_add_runtime(TCCState *s1)
         tcc_add_library(s1, "c");
 #ifdef CONFIG_USE_LIBGCC
         if (!s1->static_link) {
-            tcc_add_file(s1, TCC_LIBGCC, TCC_FILETYPE_BINARY);
+            tcc_add_file(s1, TCC_LIBGCC);
         }
 #endif
         tcc_add_support(s1, "libtcc1.a");
@@ -3427,7 +3426,7 @@ static int ld_add_file(TCCState *s1, const char filename[])
 {
     int ret;
 
-    ret = tcc_add_file_internal(s1, filename, 0, TCC_FILETYPE_BINARY);
+    ret = tcc_add_file_internal(s1, filename, AFF_TYPE_BIN);
     if (ret)
         ret = tcc_add_dll(s1, filename, 0);
     return ret;
