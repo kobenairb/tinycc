@@ -2409,8 +2409,12 @@ redo_no_start:
             goto parse_num;
         } else if (c == '.') {
             PEEKC(c, p);
-            if (c != '.')
-                expect("'.'");
+            if (c != '.') {
+                if ((parse_flags & PARSE_FLAG_ASM_COMMENTS) == 0)
+                    expect("'.'");
+                tok = '.';
+                break;
+            }
             PEEKC(c, p);
             tok = TOK_DOTS;
         } else {
