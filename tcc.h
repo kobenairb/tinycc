@@ -891,9 +891,10 @@ struct TCCState
 #define TOK_SUBC1 0xc5     /* add with carry generation */
 #define TOK_SUBC2 0xc6     /* add with carry use */
 #define TOK_ARROW 0xcb
-#define TOK_DOTS 0xcc    /* three dots */
-#define TOK_SHR 0xcd     /* unsigned shift right */
-#define TOK_NOSUBST 0xcf /* means following token has already been pp'd */
+#define TOK_DOTS 0xcc     /* three dots */
+#define TOK_SHR 0xcd      /* unsigned shift right */
+#define TOK_NOSUBST 0xcf  /* means following token has already been pp'd */
+#define TOK_GNUCOMMA 0xd0 /* ,## preprocessing token */
 
 #define TOK_SHL 0x01 /* shift left */
 #define TOK_SAR 0x02 /* signed shift right */
