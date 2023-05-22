@@ -1386,6 +1386,7 @@ void init_test(void)
            cix[0].b[2].a,
            cix[0].b[2].b);
     printf("cix2: %d %d\n", cix21.b[2], cix22.b[5]);
+    printf("sizeof cix21 %d, sizeof cix22 %d\n", sizeof cix21, sizeof cix22);
 }
 
 void switch_test()
