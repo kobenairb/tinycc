@@ -1304,7 +1304,7 @@ LIBTCCAPI int tcc_add_library(TCCState *s, const char *libraryname)
 {
 #ifdef TCC_TARGET_PE
     const char *libs[]
-        = {"%s/%s.def", "%s/lib%s.def", "%s/%s.dll", "%s/lib%s.dll", "%s/lib%s.a", "%s/%s.c", NULL};
+        = {"%s/%s.def", "%s/lib%s.def", "%s/%s.dll", "%s/lib%s.dll", "%s/lib%s.a", NULL};
     const char **pp = s->static_link ? libs + 4 : libs;
 #else
     const char *libs[] = {"%s/lib%s.so", "%s/lib%s.a", NULL};
@@ -1312,24 +1312,8 @@ LIBTCCAPI int tcc_add_library(TCCState *s, const char *libraryname)
 #endif
     while (*pp) {
         if (0
-            == tcc_add_library_internal(s,
-                                        *pp,
-                                        libraryname,
-                                        0,
-                                        s->library_paths,
-                                        s->nb_library_paths)) {
-#ifdef TCC_TARGET_PE
-            /* extra search for *.c file together with *.def file */
-            if (pp < libs + 2)
-                tcc_add_library_internal(s,
-                                         *(libs + 5),
-                                         libraryname,
-                                         0,
-                                         s->library_paths,
-                                         s->nb_library_paths);
-#endif
+            == tcc_add_library_internal(s, *pp, libraryname, 0, s->library_paths, s->nb_library_paths))
             return 0;
-        }
         ++pp;
     }
     return -1;
