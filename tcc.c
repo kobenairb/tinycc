@@ -30,7 +30,7 @@ static int multiple_files;
 static int print_search_dirs;
 static int output_type;
 static int reloc_output;
-static const char *outfile;
+static char *outfile;
 static int do_bench = 0;
 static int gen_deps;
 static const char *deps_outfile;
@@ -400,7 +400,7 @@ static int parse_args(TCCState *s, int argc, char **argv)
                 break;
             case TCC_OPTION_o:
                 multiple_files = 1;
-                outfile = optarg;
+                outfile = tcc_strdup(optarg);
                 break;
             case TCC_OPTION_r:
                 /* generate a .o merging several output files */
@@ -486,6 +486,7 @@ int main(int argc, char **argv)
     TCCState *s;
     int nb_objfiles, ret, optind;
     int64_t start_time = 0;
+    const char *default_file = NULL;
 
     s = tcc_new();
 
@@ -571,6 +572,8 @@ int main(int argc, char **argv)
                 printf("-> %s\n", filename);
             if (tcc_add_file(s, filename) < 0)
                 ret = 1;
+            if (!default_file)
+                default_file = filename;
         }
     }
 
@@ -581,17 +584,15 @@ int main(int argc, char **argv)
         if (do_bench)
             tcc_print_stats(s, getclock_us() - start_time);
 
-        if (s->output_type == TCC_OUTPUT_MEMORY)
+        if (s->output_type == TCC_OUTPUT_MEMORY) {
             ret = tcc_run(s, argc - optind, argv + optind);
-        else {
-            if (s->output_type == TCC_OUTPUT_PREPROCESS) {
-                if (outfile)
-                    fclose(s->outfile);
-            } else {
-                ret = tcc_output_file(s, outfile ? outfile : tcc_default_target(s));
-                ret = ret ? 1 : 0;
-            }
-
+        } else if (s->output_type == TCC_OUTPUT_PREPROCESS) {
+            if (s->outfile)
+                fclose(s->outfile);
+        } else {
+            if (!outfile)
+                outfile = tcc_default_target(s, default_file);
+            ret = !!tcc_output_file(s, outfile);
             /* dump collected dependencies */
             if (gen_deps && !ret)
                 tcc_gen_makedeps(s, outfile, deps_outfile);
@@ -599,6 +600,7 @@ int main(int argc, char **argv)
     }
 
     tcc_delete(s);
+    tcc_free(outfile);
 
 #ifdef MEM_DEBUG
     if (do_bench) {
