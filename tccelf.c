@@ -764,13 +764,13 @@ ST_FUNC void relocate_section(TCCState *s1, Section *s)
         case R_C60LO16: {
             uint32_t orig;
 
-            /* put the low 16 bits of the absolute address */
-            // add to what is already there
+            /* put the low 16 bits of the absolute address
+                   add to what is already there */
 
             orig = ((*(int *) (ptr)) >> 7) & 0xffff;
             orig |= (((*(int *) (ptr + 4)) >> 7) & 0xffff) << 16;
 
-            //patch both at once - assumes always in pairs Low - High
+            /* patch both at once - assumes always in pairs Low - High */
 
             *(int *) ptr = (*(int *) ptr & (~(0xffff << 7))) | (((val + orig) & 0xffff) << 7);
             *(int *) (ptr + 4) = (*(int *) (ptr + 4) & (~(0xffff << 7)))
@@ -1088,14 +1088,14 @@ static void put_got_entry(TCCState *s1, int reloc_type, unsigned long size, int 
 
             if (s1->sym_attrs[sym_index].plt_thumb_stub) {
                 p = section_ptr_add(plt, 20);
-                put32(p, 0x4778);     // bx pc
-                put32(p + 2, 0x46c0); // nop
+                put32(p, 0x4778);     /* bx pc */
+                put32(p + 2, 0x46c0); /* nop   */
                 p += 4;
             } else
                 p = section_ptr_add(plt, 16);
-            put32(p, 0xe59fc004);     // ldr ip, [pc, #4] // offset in GOT
-            put32(p + 4, 0xe08fc00c); // add ip, pc, ip // absolute address or offset
-            put32(p + 8, 0xe59cf000); // ldr pc, [ip] // load absolute address or load offset
+            put32(p, 0xe59fc004);     /* ldr ip, [pc, #4] ; offset in GOT */
+            put32(p + 4, 0xe08fc00c); /* add ip, pc, ip ; absolute address or offset */
+            put32(p + 8, 0xe59cf000); /* ldr pc, [ip] ; load absolute address or load offset */
             put32(p + 12, s1->got->data_offset);
 
             /* the symbol is modified so that it will be relocated to
@@ -1458,12 +1458,12 @@ void patch_dynsym_undef(TCCState *s1, Section *s)
     uint32_t *gotd = (void *) s1->got->data;
     ElfW(Sym) * sym, *sym_end;
 
-    gotd += 3; // dummy entries in .got
+    gotd += 3; /* dummy entries in .got */
     /* relocate symbols in .dynsym */
     sym_end = (ElfW(Sym) *) (s->data + s->data_offset);
     for (sym = (ElfW(Sym) *) s->data + 1; sym < sym_end; sym++) {
         if (sym->st_shndx == SHN_UNDEF) {
-            *gotd++ = sym->st_value + 6; // XXX 6 is magic ?
+            *gotd++ = sym->st_value + 6; /* XXX 6 is magic ? */
             sym->st_value = 0;
         }
     }
@@ -1644,7 +1644,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
                                                     0,
                                                     bss_section->sh_num,
                                                     name);
-                                // Ensure R_COPY works for weak symbol aliases
+                                /* Ensure R_COPY works for weak symbol aliases */
                                 if (ELFW(ST_BIND)(esym->st_info) == STB_WEAK) {
                                     dynsym_end = (ElfW(
                                         Sym) *) (s1->dynsymtab_section->data
@@ -1836,19 +1836,10 @@ static int elf_output_file(TCCState *s1, const char *filename)
     for (i = 1; i < s1->nb_sections; i++) {
         s = s1->sections[i];
         s->sh_name = put_elf_str(strsec, s->name);
-#if 0 /* gr */
-        printf("section: f=%08x t=%08x i=%08x %s %s\n",
-               s->sh_flags,
-               s->sh_type,
-               s->sh_info,
-               s->name,
-               s->reloc ? s->reloc->name : "n"
-               );
-#endif
         /* when generating a DLL, we include relocations but we may
            patch them */
         if (file_type == TCC_OUTPUT_DLL && s->sh_type == SHT_RELX && !(s->sh_flags & SHF_ALLOC)) {
-            /* //gr: avoid bogus relocs for empty (debug) sections */
+            /* gr: avoid bogus relocs for empty (debug) sections */
             if (s1->sections[s->sh_info]->sh_flags & SHF_ALLOC)
                 prepare_dynamic_rel(s1, s);
             else if (s1->do_debug)
@@ -1958,13 +1949,13 @@ static int elf_output_file(TCCState *s1, const char *filename)
                     /* update dynamic relocation infos */
                     if (s->sh_type == SHT_RELX) {
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-                        if (!strcmp(strsec->data + s->sh_name, ".rel.got")) { // rel_size == 0) {
+                        if (!strcmp(strsec->data + s->sh_name, ".rel.got")) {
                             rel_addr = addr;
-                            rel_size += s->sh_size; // XXX only first rel.
+                            rel_size += s->sh_size; /* XXX only first rel. */
                         }
-                        if (!strcmp(strsec->data + s->sh_name, ".rel.bss")) { // rel_size == 0) {
+                        if (!strcmp(strsec->data + s->sh_name, ".rel.bss")) {
                             bss_addr = addr;
-                            bss_size = s->sh_size; // XXX only first rel.
+                            bss_size = s->sh_size; /* XXX only first rel. */
                         }
 #else
                         if (rel_size == 0)
@@ -2007,7 +1998,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
                 ph->p_paddr = ph->p_vaddr;
                 ph->p_filesz = ph->p_memsz = len;
                 ph->p_flags = PF_R | PF_X;
-                ph->p_align = 4; // interp->sh_addralign;
+                ph->p_align = 4; /* interp->sh_addralign; */
                 ph++;
             }
 #endif
@@ -2493,7 +2484,7 @@ ST_FUNC int tcc_load_object_file(TCCState *s1, int fd, unsigned long file_offset
     next:;
     }
 
-    /* //gr relocate stab strings */
+    /* gr relocate stab strings */
     if (stab_index && stabstr_index) {
         Stab_Sym *a, *b;
         unsigned o;
@@ -2669,9 +2660,6 @@ static int tcc_load_alacarte(TCCState *s1, int fd, int size)
                 sym = &((ElfW(Sym) *) symtab_section->data)[sym_index];
                 if (sym->st_shndx == SHN_UNDEF) {
                     off = get_be32(ar_index + i * 4) + sizeof(ArchiveHeader);
-#if 0
-                    printf("%5d\t%s\t%08x\n", i, p, sym->st_shndx);
-#endif
                     ++bound;
                     lseek(fd, off, SEEK_SET);
                     if (tcc_load_object_file(s1, fd, off) < 0) {
@@ -2719,7 +2707,6 @@ ST_FUNC int tcc_load_archive(TCCState *s1, int fd)
                 break;
         }
         ar_name[i + 1] = '\0';
-        //        printf("name='%s' size=%d %s\n", ar_name, size, ar_size);
         file_offset = lseek(fd, 0, SEEK_CUR);
         /* align to even */
         size = (size + 1) & ~1;
@@ -2808,8 +2795,6 @@ ST_FUNC int tcc_load_dll(TCCState *s1, int fd, const char *filename, int level)
             goto the_end;
         }
     }
-
-    //    printf("loading dll '%s'\n", soname);
 
     /* add the dll and its level */
     dllref = tcc_mallocz(sizeof(DLLReference) + strlen(soname));
@@ -2972,11 +2957,6 @@ redo:
         inp();
         break;
     }
-#if 0
-    printf("tok=%c %d\n", c, c);
-    if (c == LD_TOK_NAME)
-        printf("  name=%s\n", name);
-#endif
     return c;
 }
 
@@ -3113,4 +3093,4 @@ ST_FUNC int tcc_load_ldscript(TCCState *s1)
     }
     return 0;
 }
-#endif /* ndef TCC_TARGET_PE */
+#endif /* !TCC_TARGET_PE */
