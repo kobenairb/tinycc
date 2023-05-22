@@ -860,17 +860,22 @@ struct TCCState
 #endif
 
     /* used by main and tcc_parse_args only */
-    char **files;          /* files seen on command line */
-    int nb_files;          /* number thereof */
-    int nb_libraries;      /* number of libs thereof */
-    char *outfile;         /* output filename */
-    char *option_m;        /* only -m32/-m64 handled */
-    int print_search_dirs; /* option */
-    int option_r;          /* option -r */
-    int do_bench;          /* option -bench */
-    int gen_deps;          /* option -MD  */
-    char *deps_outfile;    /* option -MF */
+    struct filespec **files; /* files seen on command line */
+    int nb_files;            /* number thereof */
+    int nb_libraries;        /* number of libs thereof */
+    char *outfile;           /* output filename */
+    char *option_m;          /* only -m32/-m64 handled */
+    int print_search_dirs;   /* option */
+    int option_r;            /* option -r */
+    int do_bench;            /* option -bench */
+    int gen_deps;            /* option -MD  */
+    char *deps_outfile;      /* option -MF */
     ParseArgsState *parse_args_state;
+};
+
+struct filespec
+{
+    char type, name[1];
 };
 
 /* The current value can be: */
