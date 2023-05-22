@@ -85,6 +85,7 @@ void statement_expr_test(void);
 void asm_test(void);
 void builtin_test(void);
 void weak_test(void);
+void global_data_test(void);
 
 int fib(int n);
 void num(int n);
@@ -433,6 +434,8 @@ void loop_test()
     printf("\n");
 }
 
+typedef int typedef_and_label;
+
 void goto_test()
 {
     int i;
@@ -440,6 +443,8 @@ void goto_test()
 
     printf("goto:\n");
     i = 0;
+    /* This needs to parse as label, not as start of decl.  */
+typedef_and_label:
 s_loop:
     if (i >= 10)
         goto s_end;
@@ -584,6 +589,7 @@ int main(int argc, char **argv)
     asm_test();
     builtin_test();
     weak_test();
+    global_data_test();
     return 0;
 }
 
@@ -1114,25 +1120,31 @@ struct structa1 struct_assign_test2(struct structa1 s1, int t)
 
 void struct_assign_test(void)
 {
-    struct structa1 lsta1, lsta2;
+    struct S
+    {
+        struct structa1 lsta1, lsta2;
+        int i;
+    } s, *ps;
 
+    ps = &s;
+    ps->i = 4;
 #if 0
     printf("struct_assign_test:\n");
 
-    lsta1.f1 = 1;
-    lsta1.f2 = 2;
-    printf("%d %d\n", lsta1.f1, lsta1.f2);
-    lsta2 = lsta1;
-    printf("%d %d\n", lsta2.f1, lsta2.f2);
+    s.lsta1.f1 = 1;
+    s.lsta1.f2 = 2;
+    printf("%d %d\n", s.lsta1.f1, s.lsta1.f2);
+    s.lsta2 = s.lsta1;
+    printf("%d %d\n", s.lsta2.f1, s.lsta2.f2);
 #else
-    lsta2.f1 = 1;
-    lsta2.f2 = 2;
+    s.lsta2.f1 = 1;
+    s.lsta2.f2 = 2;
 #endif
-    struct_assign_test1(lsta2, 3, 4.5);
+    struct_assign_test1(ps->lsta2, 3, 4.5);
 
-    printf("before call: %d %d\n", lsta2.f1, lsta2.f2);
-    lsta2 = struct_assign_test2(lsta2, 4);
-    printf("after call: %d %d\n", lsta2.f1, lsta2.f2);
+    printf("before call: %d %d\n", s.lsta2.f1, s.lsta2.f2);
+    ps->lsta2 = struct_assign_test2(ps->lsta2, ps->i);
+    printf("after call: %d %d\n", ps->lsta2.f1, ps->lsta2.f2);
 
     static struct
     {
@@ -2656,4 +2668,32 @@ int getme(struct condstruct *s, int i)
     int i3 = (i == 0 ? (void *) 0 : s)->i;
     int i4 = (i == 0 ? s : (void *) 0)->i;
     return i1 + i2 + i3 + i4;
+}
+
+struct global_data
+{
+    int a[40];
+    int *b[40];
+};
+
+struct global_data global_data;
+
+int global_data_getstuff(int *, int);
+
+void global_data_callit(int i)
+{
+    *global_data.b[i] = global_data_getstuff(global_data.b[i], 1);
+}
+
+int global_data_getstuff(int *p, int i)
+{
+    return *p + i;
+}
+
+void global_data_test(void)
+{
+    global_data.a[0] = 42;
+    global_data.b[0] = &global_data.a[0];
+    global_data_callit(0);
+    printf("%d\n", global_data.a[0]);
 }
