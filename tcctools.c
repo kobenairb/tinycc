@@ -368,7 +368,7 @@ ST_FUNC int tcc_tool_impdef(TCCState *s1, int argc, char **argv)
     }
 
     if (v)
-        printf("<- %s (%d symbol%s)\n", outfile, i, "s"[i < 2]);
+        printf("<- %s (%d symbol%s)\n", outfile, i, &"s"[i < 2]);
 
     ret = 0;
 
