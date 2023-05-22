@@ -3326,7 +3326,7 @@ redo:
     case '/':
         minp();
         if (ch == '*') {
-            file->buf_ptr = parse_comment(file->buf_ptr, 0);
+            file->buf_ptr = parse_comment(file->buf_ptr);
             ch = file->buf_ptr[0];
             goto redo;
         } else {
