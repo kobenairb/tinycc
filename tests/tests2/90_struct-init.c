@@ -85,7 +85,7 @@ struct U gu4 = {3,
 struct S gs3 = {(1), {(2)}, {(((3))), {4}}};
 /* Superfluous braces, and leaving out braces for V.t, plus cast */
 struct V gv = {{{3}, 4, {5, 6}}, "haha", (u8) 45, 46};
-/* Compund literal */
+/* Compound literal */
 struct V gv2 = {(struct S){7, 8, {9, 10}}, {"hihi", 47}, 48};
 /* Parens around compound literal */
 struct V gv3 = {((struct S){7, 8, {9, 10}}), {"hoho", 49}, 50};
@@ -205,7 +205,7 @@ void foo(struct W *w, struct pkthdr *phdr_)
     struct S ls3 = {(1), (2), {(((3))), 4}};
     /* Superfluous braces, and leaving out braces for V.t, plus cast */
     struct V lv = {{3, 4, {5, 6}}, "haha", (u8) 45, 46};
-    /* Compund literal */
+    /* Compound literal */
     struct V lv2 = {(struct S) w->t.s, {"hihi", 47}, 48};
     /* Parens around compound literal */
     struct V lv3 = {((struct S){7, 8, {9, 10}}), ((const struct W *) w)->t.t, 50};
