@@ -34,7 +34,7 @@ REGS_RETURN(double_unsigned_struct, double_unsigned_struct)
 /* float -> integer: (sign) 1.fraction x 2^(exponent - exp_for_one) */
 
 /* float to [unsigned] long long conversion */
-#define DEFINE__AEABIT_F2XLZ(name, with_sign)                                    \
+#define DEFINE__AEABI_F2XLZ(name, with_sign)                                     \
     void __aeabi_##name(unsigned val)                                            \
     {                                                                            \
         int exp, high_shift, sign;                                               \
@@ -74,7 +74,7 @@ REGS_RETURN(double_unsigned_struct, double_unsigned_struct)
             if (exp > FLOAT_FRAC_BITS)                                           \
                 ret.low |= val << (exp - FLOAT_FRAC_BITS);                       \
             else                                                                 \
-                ret.low = val >> (FLOAT_FRAC_BITS - exp);                        \
+                ret.low |= val >> (FLOAT_FRAC_BITS - exp);                       \
         }                                                                        \
                                                                                  \
         /* encode negative integer using 2's complement */                       \
@@ -92,13 +92,13 @@ REGS_RETURN(double_unsigned_struct, double_unsigned_struct)
     }
 
 /* float to unsigned long long conversion */
-DEFINE__AEABIT_F2XLZ(f2ulz, 0)
+DEFINE__AEABI_F2XLZ(f2ulz, 0)
 
 /* float to long long conversion */
-DEFINE__AEABIT_F2XLZ(f2lz, 1)
+DEFINE__AEABI_F2XLZ(f2lz, 1)
 
 /* double to [unsigned] long long conversion */
-#define DEFINE__AEABIT_D2XLZ(name, with_sign)                                    \
+#define DEFINE__AEABI_D2XLZ(name, with_sign)                                     \
     void __aeabi_##name(double_unsigned_struct val)                              \
     {                                                                            \
         int exp, high_shift, sign;                                               \
@@ -143,7 +143,7 @@ DEFINE__AEABIT_F2XLZ(f2lz, 1)
                 ret.low |= val.high << high_shift;                               \
                 ret.low |= val.low >> (32 - high_shift);                         \
             } else                                                               \
-                ret.low = val.high >> (DOUBLE_FRAC_BITS - 32 - exp);             \
+                ret.low |= val.high >> (DOUBLE_FRAC_BITS - 32 - exp);            \
         }                                                                        \
                                                                                  \
         /* encode negative integer using 2's complement */                       \
@@ -161,21 +161,21 @@ DEFINE__AEABIT_F2XLZ(f2lz, 1)
     }
 
 /* double to unsigned long long conversion */
-DEFINE__AEABIT_D2XLZ(d2ulz, 0)
+DEFINE__AEABI_D2XLZ(d2ulz, 0)
 
 /* double to long long conversion */
-DEFINE__AEABIT_D2XLZ(d2lz, 1)
+DEFINE__AEABI_D2XLZ(d2lz, 1)
 
 /* long long to float conversion */
 #define DEFINE__AEABI_XL2F(name, with_sign)                              \
     unsigned __aeabi_##name(unsigned long long v)                        \
     {                                                                    \
-        int s /* shift */, sign = 0;                                     \
+        int s /* shift */, flb /* first lost bit */, sign = 0;           \
         unsigned p = 0 /* power */, ret;                                 \
         double_unsigned_struct val;                                      \
                                                                          \
         /* fraction in negative float is encoded in 1's complement */    \
-        if (with_sign && (v & (1 << 63))) {                              \
+        if (with_sign && (v & (1ULL << 63))) {                           \
             sign = 1;                                                    \
             v = ~v + 1;                                                  \
         }                                                                \
@@ -189,21 +189,29 @@ DEFINE__AEABIT_D2XLZ(d2lz, 1)
             if (s < FLOAT_FRAC_BITS) {                                   \
                 ret <<= FLOAT_FRAC_BITS - s;                             \
                 ret |= val.low >> (32 - (FLOAT_FRAC_BITS - s));          \
-            } else                                                       \
+                flb = (val.low >> (32 - (FLOAT_FRAC_BITS - s - 1))) & 1; \
+            } else {                                                     \
+                flb = (ret >> (s - FLOAT_FRAC_BITS - 1)) & 1;            \
                 ret >>= s - FLOAT_FRAC_BITS;                             \
+            }                                                            \
             s += 32;                                                     \
         } else {                                                         \
             for (s = 31, p = 1 << 31; p && !(val.low & p); s--, p >>= 1) \
                 ;                                                        \
             if (p) {                                                     \
                 ret = val.low & (p - 1);                                 \
-                if (s <= FLOAT_FRAC_BITS)                                \
+                if (s <= FLOAT_FRAC_BITS) {                              \
                     ret <<= FLOAT_FRAC_BITS - s;                         \
-                else                                                     \
+                    flb = 0;                                             \
+                } else {                                                 \
+                    flb = (ret >> (s - FLOAT_FRAC_BITS - 1)) & 1;        \
                     ret >>= s - FLOAT_FRAC_BITS;                         \
+                }                                                        \
             } else                                                       \
                 return 0;                                                \
         }                                                                \
+        if (flb)                                                         \
+            ret++;                                                       \
                                                                          \
         /* fill exponent bits */                                         \
         ret |= (s + ONE_EXP(FLOAT)) << FLOAT_FRAC_BITS;                  \
@@ -218,13 +226,13 @@ DEFINE__AEABIT_D2XLZ(d2lz, 1)
 DEFINE__AEABI_XL2F(ul2f, 0)
 
 /* long long to float conversion */
-DEFINE__AEABI_XL2F(l2f, 0)
+DEFINE__AEABI_XL2F(l2f, 1)
 
 /* long long to double conversion */
 #define __AEABI_XL2D(name, with_sign)                                    \
     void __aeabi_##name(unsigned long long v)                            \
     {                                                                    \
-        int s, high_shift, sign = 0;                                     \
+        int s /* shift */, high_shift, sign = 0;                         \
         unsigned tmp, p = 0;                                             \
         double_unsigned_struct val, ret;                                 \
                                                                          \
@@ -251,6 +259,13 @@ DEFINE__AEABI_XL2F(l2f, 0)
                 ret.high = tmp >> high_shift;                            \
                 ret.low = tmp << (32 - high_shift);                      \
                 ret.low |= val.low >> high_shift;                        \
+                if ((val.low >> (high_shift - 1)) & 1) {                 \
+                    if (ret.low == UINT_MAX) {                           \
+                        ret.high++;                                      \
+                        ret.low = 0;                                     \
+                    } else                                               \
+                        ret.low++;                                       \
+                }                                                        \
             }                                                            \
             s += 32;                                                     \
         } else {                                                         \
