@@ -3764,7 +3764,6 @@ typedef struct __attribute__((__packed__))
     int c;
 } Spacked2;
 Spacked2 spacked2;
-#ifdef BROKEN
 /* This doesn't work for now.  Requires adjusting field offsets/sizes
    after parsing the struct members.  */
 typedef struct Spacked3_s
@@ -3774,7 +3773,6 @@ typedef struct Spacked3_s
     int c;
 } __attribute__((__packed__)) Spacked3;
 Spacked3 spacked3;
-#endif
 void attrib_test(void)
 {
     printf("attr: %d %d %d %d\n",
@@ -3782,9 +3780,7 @@ void attrib_test(void)
            sizeof(spacked),
            sizeof(Spacked2),
            sizeof(spacked2));
-#ifdef BROKEN
     printf("attr: %d %d\n", sizeof(Spacked3), sizeof(spacked3));
-#endif
 }
 extern __attribute__((__unused__)) char *__attribute__((__unused__))
     * strange_attrib_placement(void);
