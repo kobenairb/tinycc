@@ -2950,9 +2950,6 @@ static int parse_btype(CType *type, AttributeDef *ad)
         case TOK_ATTRIBUTE1:
         case TOK_ATTRIBUTE2:
             parse_attribute(ad);
-            if (ad->weak) {
-                t |= VT_WEAK;
-            }
             if (ad->mode) {
                 u = ad->mode - 1;
                 t = (t & ~VT_BTYPE) | u;
@@ -3211,9 +3208,6 @@ static void type_decl(CType *type, AttributeDef *ad, int *v, int td)
     post_type(type, ad);
     if (tok == TOK_ATTRIBUTE1 || tok == TOK_ATTRIBUTE2)
         parse_attribute(ad);
-
-    if (ad->weak)
-        type->t |= VT_WEAK;
 
     if (!type1.t)
         return;
@@ -5406,6 +5400,8 @@ ST_FUNC void decl(int l)
                     func_decl_list(sym);
             }
 
+            if (ad.weak)
+                type.t |= VT_WEAK;
 #ifdef TCC_TARGET_PE
             if (ad.func_import)
                 type.t |= VT_IMPORT;
