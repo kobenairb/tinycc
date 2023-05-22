@@ -2257,6 +2257,11 @@ redo_no_start:
         }
         break;
 
+    /* treat $ as allowed char in indentifier  */
+    case '$':
+        if (!tcc_state->dollars_in_identifiers)
+            goto parse_simple;
+
     case 'a':
     case 'b':
     case 'c':
@@ -2600,8 +2605,8 @@ redo_no_start:
     case ':':
     case '?':
     case '~':
-    case '$': /* only used in assembler */
-    case '@': /* dito */
+    case '@': /* only used in assembler */
+    parse_simple:
         tok = c;
         p++;
         break;
@@ -3176,7 +3181,8 @@ ST_FUNC void preprocess_new(void)
 
     /* init isid table */
     for (i = CH_EOF; i < 256; i++)
-        isidnum_table[i - CH_EOF] = isid(i) || isnum(i);
+        isidnum_table[i - CH_EOF] = (isid(i) || isnum(i)
+                                     || (tcc_state->dollars_in_identifiers ? i == '$' : 0));
 
     /* add all tokens */
     if (table_ident) {
