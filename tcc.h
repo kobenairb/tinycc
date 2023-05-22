@@ -635,6 +635,14 @@ struct sym_attr
 #endif
 };
 
+typedef struct ParseArgsState
+{
+    int run;
+    int pthread;
+    int filetype;
+    CString linker_arg; /* collect -Wl options for input such as "-Wl,-rpath -Wl,<path>" */
+} ParseArgsState;
+
 struct TCCState
 {
     int verbose;       /* if true, display some information during compilation */
@@ -814,6 +822,7 @@ struct TCCState
     int do_bench;          /* option -bench */
     int gen_deps;          /* option -MD  */
     char *deps_outfile;    /* option -MF */
+    ParseArgsState *parse_args_state;
 };
 
 /* The current value can be: */
