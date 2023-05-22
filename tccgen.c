@@ -5123,7 +5123,7 @@ static void decl_initializer_alloc(
        literals). It also simplifies local
        initializers handling */
     tok_str_new(&init_str);
-    if (size < 0 || flexible_array) {
+    if (size < 0 || (flexible_array && has_init)) {
         if (!has_init)
             error("unknown type size");
         /* get all init string */

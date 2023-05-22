@@ -1299,6 +1299,8 @@ struct complexinit2
     int b[];
 };
 
+struct complexinit2 cix20;
+
 struct complexinit2 cix21 = {.a = 3000, .b = {3001, 3002, 3003}};
 
 struct complexinit2 cix22 = {.a = 4000, .b = {4001, 4002, 4003, 4004, 4005, 4006}};
@@ -1392,7 +1394,7 @@ void init_test(void)
            cix[0].b[2].a,
            cix[0].b[2].b);
     printf("cix2: %d %d\n", cix21.b[2], cix22.b[5]);
-    printf("sizeof cix21 %d, sizeof cix22 %d\n", sizeof cix21, sizeof cix22);
+    printf("sizeof cix20 %d, cix21 %d, sizeof cix22 %d\n", sizeof cix20, sizeof cix21, sizeof cix22);
 }
 
 void switch_test()
