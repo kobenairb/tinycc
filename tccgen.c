@@ -93,9 +93,6 @@ static void vla_runtime_type_size(CType *type, int *a);
 static void vla_sp_save(void);
 static int is_compatible_parameter_types(CType *type1, CType *type2);
 static void expr_type(CType *type);
-static int is_putz;
-static int is_force;
-
 ST_FUNC void vpush64(int ty, unsigned long long v);
 ST_FUNC void vpush(CType *type);
 ST_FUNC int gvtst(int inv, int t);
@@ -1013,7 +1010,6 @@ ST_FUNC void lexpand_nr(void)
 }
 #endif
 
-#ifndef TCC_TARGET_X86_64
 /* build a long long from two ints */
 static void lbuild(int t)
 {
@@ -1022,7 +1018,6 @@ static void lbuild(int t)
     vtop[-1].type.t = t;
     vpop();
 }
-#endif
 
 /* rotate n first stack elements to the bottom
    I1 ... In -> I2 ... In I1 [top is right]
@@ -1084,8 +1079,8 @@ static void gv_dup(void)
 {
     int rc, t, r, r1;
     SValue sv;
+
     t = vtop->type.t;
-#ifndef TCC_TARGET_X86_64
     if ((t & VT_BTYPE) == VT_LLONG) {
         lexpand();
         gv_dup();
@@ -1095,14 +1090,15 @@ static void gv_dup(void)
         vrotb(4);
         /* stack: H L L1 H1 */
         lbuild(t);
-        vrott(3);
+        vrotb(3);
+        vrotb(3);
         vswap();
         lbuild(t);
         vswap();
-    } else
-#endif
-    {
+    } else {
         /* duplicate value */
+        rc = RC_INT;
+        sv.type.t = VT_INT;
         if (is_float(t)) {
             rc = RC_FLOAT;
 #ifdef TCC_TARGET_X86_64
@@ -1110,9 +1106,8 @@ static void gv_dup(void)
                 rc = RC_ST0;
             }
 #endif
-        } else
-            rc = RC_INT;
-        sv.type.t = t;
+            sv.type.t = t;
+        }
         r = gv(rc);
         r1 = get_reg(rc);
         sv.r = r;
@@ -2030,30 +2025,11 @@ static void gen_cast(CType *type)
                     ;
 #endif
                 else if (dbt != VT_LLONG) {
-                    int s, dt, warr = 0;
-                    long long ll;
-                    dt = dbt & VT_BTYPE;
-                    ll = vtop->c.ll;
-                    if (dt == VT_BYTE) {
-                        if ((ll != (unsigned char) ll) && (ll != (char) ll))
-                            warr = 1;
+                    int s = 0;
+                    if ((dbt & VT_BTYPE) == VT_BYTE)
                         s = 24;
-                    } else if (dt == VT_SHORT) {
-                        if ((ll != (unsigned short) ll) && (ll != (short) ll))
-                            warr = 1;
+                    else if ((dbt & VT_BTYPE) == VT_SHORT)
                         s = 16;
-                    } else {
-                        if ((ll != (unsigned int) ll) && (ll != (int) ll))
-                            warr = 1;
-                        s = 0;
-                    }
-                    if (warr && !is_force) {
-                        if (dt == VT_ENUM) {
-                            tcc_warning("large integer implicitly truncated to unsigned type");
-                            dbt = VT_UNSIGNED;
-                        } else
-                            tcc_warning("overflow in implicit constant conversion");
-                    }
                     if (dbt & VT_UNSIGNED)
                         vtop->c.ui = ((unsigned int) vtop->c.ll << s) >> s;
                     else
@@ -2497,8 +2473,6 @@ static void gen_assign_cast(CType *dt)
         if (sbt == VT_PTR || sbt == VT_FUNC) {
             tcc_warning("assignment makes integer from pointer without a cast");
         }
-        if (sbt == VT_STRUCT)
-            goto error;
         /* XXX: more tests */
         break;
     case VT_STRUCT:
@@ -2521,15 +2495,14 @@ type_ok:
 /* store vtop in lvalue pushed on stack */
 ST_FUNC void vstore(void)
 {
-    int sbt, dbt, ft, cc, r, t, size, align, bit_size, bit_pos, rc, delayed_cast;
+    int sbt, dbt, ft, r, t, size, align, bit_size, bit_pos, rc, delayed_cast;
 
     ft = vtop[-1].type.t;
     sbt = vtop->type.t & VT_BTYPE;
     dbt = ft & VT_BTYPE;
-    cc = (vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
     if ((((sbt == VT_INT || sbt == VT_SHORT) && dbt == VT_BYTE)
          || (sbt == VT_INT && dbt == VT_SHORT))
-        && !(vtop->type.t & VT_BITFIELD) && !cc) {
+        && !(vtop->type.t & VT_BITFIELD)) {
         /* optimize char/short casts */
         delayed_cast = VT_MUSTCAST;
         vtop->type.t = ft & (VT_TYPE & ~(VT_BITFIELD | (-1 << VT_STRUCT_SHIFT)));
@@ -2623,6 +2596,7 @@ ST_FUNC void vstore(void)
 
         /* pop off shifted source from "duplicate source..." above */
         vpop();
+
     } else {
 #ifdef CONFIG_TCC_BCHECK
         /* bound check case */
@@ -2898,7 +2872,7 @@ static void struct_decl(CType *type, int u, int tdef)
         s = struct_find(v);
         if (s) {
             if (s->type.t != a)
-                tcc_error("invalid type: '%s'", get_tok_str(v, NULL));
+                tcc_error("invalid type");
             goto do_decl;
         } else if (tok >= TOK_IDENT && !tdef)
             tcc_error("unknown struct/union/enum");
@@ -2969,7 +2943,7 @@ do_decl:
                         if (v == 0 && (type1.t & VT_BTYPE) != VT_STRUCT)
                             expect("identifier");
                         if (type_size(&type1, &align) < 0) {
-                            if ((a == TOK_STRUCT) && (type1.t & VT_ARRAY))
+                            if ((a == TOK_STRUCT) && (type1.t & VT_ARRAY) && c)
                                 flexible = 1;
                             else
                                 tcc_error("field '%s' has incomplete type", get_tok_str(v, NULL));
@@ -3077,9 +3051,6 @@ do_decl:
                 skip(';');
             }
             skip('}');
-            if (!c && flexible)
-                tcc_error("flexible array member '%s' in otherwise empty struct",
-                          get_tok_str(v, NULL));
             /* store size and alignment */
             s->c = (c + maxalign - 1) & -maxalign;
             s->r = maxalign;
@@ -3762,9 +3733,7 @@ tok_next:
                     return;
                 }
                 unary();
-                is_force = 1;
                 gen_cast(&type);
-                is_force = 0;
             }
         } else if (tok == '{') {
             /* save all registers */
@@ -3843,8 +3812,6 @@ tok_next:
             if (!(type.t & VT_VLA)) {
                 if (size < 0)
                     tcc_error("sizeof applied to an incomplete type");
-                if (type.t & VT_BITFIELD)
-                    tcc_error("'%s' applied to a bit-field", get_tok_str(t, NULL));
                 vpushs(size);
             } else {
                 vla_runtime_type_size(&type, &align);
@@ -4009,7 +3976,7 @@ tok_next:
 #endif
             )
                 tcc_warning("implicit declaration of function '%s'", name);
-            s = external_sym(t, &func_old_type, 0, NULL);
+            s = external_global_sym(t, &func_old_type, 0);
         }
         if ((s->type.t & (VT_STATIC | VT_INLINE | VT_BTYPE)) == (VT_STATIC | VT_INLINE | VT_FUNC)) {
             /* if referencing an inline function, then we generate a
@@ -5043,11 +5010,11 @@ static void decl_designator(
     nb_elems = 1;
     if (gnu_ext && (l = is_label()) != 0)
         goto struct_field;
-    s = type->ref;
     while (tok == '[' || tok == '.') {
         if (tok == '[') {
             if (!(type->t & VT_ARRAY))
                 expect("array type");
+            s = type->ref;
             next();
             index = expr_const();
             if (index < 0 || (s->c >= 0 && index >= s->c))
@@ -5079,6 +5046,7 @@ static void decl_designator(
         struct_field:
             if ((type->t & VT_BTYPE) != VT_STRUCT)
                 expect("struct/union type");
+            s = type->ref;
             l |= SYM_FIELD;
             f = s->next;
             while (f) {
@@ -5108,29 +5076,17 @@ static void decl_designator(
     } else {
         if (type->t & VT_ARRAY) {
             index = *cur_index;
-            if (s->c >= 0 && index >= s->c) {
-                if (!size_only)
-                    tcc_warning("excess elements in array initializer");
-                type = NULL;
-                size_only = 1;
-            } else {
-                type = pointed_type(type);
-                c += index * type_size(type, &align);
-            }
+            type = pointed_type(type);
+            c += index * type_size(type, &align);
         } else {
             f = *cur_field;
-            if (f) {
-                /* XXX: fix this mess by using explicit storage field */
-                type1 = f->type;
-                type1.t |= (type->t & ~VT_TYPE);
-                type = &type1;
-                c += f->c;
-            } else {
-                if (!size_only)
-                    tcc_warning("excess elements in %s initializer", get_tok_str(s->type.t, NULL));
-                type = NULL;
-                size_only = 1;
-            }
+            if (!f)
+                tcc_error("too many field init");
+            /* XXX: fix this mess by using explicit storage field */
+            type1 = f->type;
+            type1.t |= (type->t & ~VT_TYPE);
+            type = &type1;
+            c += f->c;
         }
     }
     decl_initializer(type, sec, c, 0, size_only);
@@ -5284,8 +5240,6 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
     Sym *s, *f;
     CType *t1;
 
-    if (!type)
-        goto Ignore;
     if (type->t & VT_VLA) {
         int a;
 
@@ -5375,10 +5329,13 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
             index = 0;
             while (tok != '}') {
                 decl_designator(type, sec, c, &index, NULL, size_only);
+                if (n >= 0 && index >= n)
+                    tcc_error("index too large");
                 /* must put zero in holes (note that doing it that way
                    ensures that it even works with designators) */
-                if (!is_putz && array_length < index)
-                    is_putz = 1;
+                if (!size_only && array_length < index) {
+                    init_putz(t1, sec, c + array_length * size1, (index - array_length) * size1);
+                }
                 index++;
                 if (index > array_length)
                     array_length = index;
@@ -5395,8 +5352,9 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
         if (!no_oblock)
             skip('}');
         /* put zeros at the end */
-        if (!is_putz && n >= 0 && array_length < n)
-            is_putz = 1;
+        if (!size_only && n >= 0 && array_length < n) {
+            init_putz(t1, sec, c + array_length * size1, (n - array_length) * size1);
+        }
         /* patch type size if needed */
         if (n < 0)
             s->c = array_length;
@@ -5441,44 +5399,44 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
         n = s->c;
         while (tok != '}') {
             decl_designator(type, sec, c, NULL, &f, size_only);
-            if (f) {
-                index = f->c;
-                if (!is_putz && array_length < index)
-                    is_putz = 1;
-                index = index + type_size(&f->type, &align1);
-                if (index > array_length)
-                    array_length = index;
-
-                /* gr: skip fields from same union - ugly. */
-                while (f->next) {
-                    ///printf("index: %2d %08x -- %2d %08x\n", f->c, f->type.t, f->next->c, f->next->type.t);
-                    /* test for same offset */
-                    if (f->next->c != f->c)
-                        break;
-                    /* if yes, test for bitfield shift */
-                    if ((f->type.t & VT_BITFIELD) && (f->next->type.t & VT_BITFIELD)) {
-                        int bit_pos_1 = (f->type.t >> VT_STRUCT_SHIFT) & 0x3f;
-                        int bit_pos_2 = (f->next->type.t >> VT_STRUCT_SHIFT) & 0x3f;
-                        //printf("bitfield %d %d\n", bit_pos_1, bit_pos_2);
-                        if (bit_pos_1 != bit_pos_2)
-                            break;
-                    }
-                    f = f->next;
-                }
-
-                f = f->next;
-                if (no_oblock && f == NULL)
-                    break;
+            index = f->c;
+            if (!size_only && array_length < index) {
+                init_putz(type, sec, c + array_length, index - array_length);
             }
+            index = index + type_size(&f->type, &align1);
+            if (index > array_length)
+                array_length = index;
+
+            /* gr: skip fields from same union - ugly. */
+            while (f->next) {
+                ///printf("index: %2d %08x -- %2d %08x\n", f->c, f->type.t, f->next->c, f->next->type.t);
+                /* test for same offset */
+                if (f->next->c != f->c)
+                    break;
+                /* if yes, test for bitfield shift */
+                if ((f->type.t & VT_BITFIELD) && (f->next->type.t & VT_BITFIELD)) {
+                    int bit_pos_1 = (f->type.t >> VT_STRUCT_SHIFT) & 0x3f;
+                    int bit_pos_2 = (f->next->type.t >> VT_STRUCT_SHIFT) & 0x3f;
+                    //printf("bitfield %d %d\n", bit_pos_1, bit_pos_2);
+                    if (bit_pos_1 != bit_pos_2)
+                        break;
+                }
+                f = f->next;
+            }
+
+            f = f->next;
+            if (no_oblock && f == NULL)
+                break;
             if (tok == '}')
                 break;
             skip(',');
         }
+        /* put zeros at the end */
+        if (!size_only && array_length < n) {
+            init_putz(type, sec, c + array_length, n - array_length);
+        }
         if (!no_oblock)
             skip('}');
-        /* put zeros at the end */
-        if (!is_putz && array_length < n)
-            is_putz = 1;
         while (par_count) {
             skip(')');
             par_count--;
@@ -5488,7 +5446,6 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
         decl_initializer(type, sec, c, first, size_only);
         skip('}');
     } else if (size_only) {
-    Ignore:
         /* just skip expression */
         parlevel = parlevel1 = 0;
         while ((parlevel > 0 || parlevel1 > 0 || (tok != '}' && tok != ',')) && tok != -1) {
@@ -5531,7 +5488,6 @@ static void decl_initializer_alloc(
     Sym *flexible_array;
 
     flexible_array = NULL;
-    is_putz = 0;
     if ((type->t & VT_BTYPE) == VT_STRUCT) {
         Sym *field = type->ref->next;
         if (field) {
@@ -5550,9 +5506,7 @@ static void decl_initializer_alloc(
        literals). It also simplifies local
        initializers handling */
     tok_str_new(&init_str);
-    if (size < 0
-        || ((((type->t & VT_BTYPE) == VT_STRUCT) || (type->t & VT_ARRAY)) && has_init
-            && (tok < TOK_IDENT))) {
+    if (size < 0 || (flexible_array && has_init)) {
         if (!has_init)
             tcc_error("unknown type size");
         /* get all init string */
@@ -5739,8 +5693,6 @@ static void decl_initializer_alloc(
 #endif
     }
     if (has_init || (type->t & VT_VLA)) {
-        if (is_putz)
-            init_putz(type, sec, addr, size);
         decl_initializer(type, sec, addr, 1, 0);
         /* restore parse state if needed */
         if (init_str.str) {

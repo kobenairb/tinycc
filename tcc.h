@@ -302,24 +302,16 @@ extern long double strtold(const char *__nptr, char **__endptr);
 #define VSTACK_SIZE 256
 #define STRING_MAX_SIZE 1024
 #define PACK_STACK_SIZE 8
-#define MACRO_STACK_SIZE 8
 
 #define TOK_HASH_SIZE 8192 /* must be a power of two */
 #define TOK_ALLOC_INCR 512 /* must be a power of two */
 #define TOK_MAX_SIZE 4     /* token max size in int unit when stored in string */
 
-typedef struct CSym
-{
-    int off;
-    int size;          /* size in *sym */
-    struct Sym **data; /* if non NULL, data has been malloced */
-} CSym;
-
 /* token symbol management */
 typedef struct TokenSym
 {
     struct TokenSym *hash_next;
-    struct CSym sym_define;     /* direct pointer to define */
+    struct Sym *sym_define;     /* direct pointer to define */
     struct Sym *sym_label;      /* direct pointer to label */
     struct Sym *sym_struct;     /* direct pointer to structure */
     struct Sym *sym_identifier; /* direct pointer to identifier */

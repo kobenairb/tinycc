@@ -70,7 +70,7 @@ ifdef LIBTCC1
  LIBTCC1:=$(TOP)/$(LIBTCC1)
 endif
 
-all test : clean $(TESTS)
+all test : $(TESTS)
 
 hello-exe: ../examples/ex1.c
 	@echo ------------ $@ ------------

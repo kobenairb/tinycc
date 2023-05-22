@@ -379,55 +379,6 @@ comment
     /* And again when the name and parenthes are separated by a
        comment.  */
     TEST2 /* the comment */ ();
-
-/* macro_push and macro_pop test */
-#undef MACRO_TEST
-#ifdef MACRO_TEST
-    printf("define MACRO_TEST\n");
-#else
-    printf("undef MACRO_TEST\n");
-#endif
-
-#pragma push_macro("MACRO_TEST")
-#define MACRO_TEST
-#pragma push_macro("MACRO_TEST")
-#undef MACRO_TEST
-#pragma push_macro("MACRO_TEST")
-
-#pragma pop_macro("MACRO_TEST")
-#ifdef MACRO_TEST
-    printf("define MACRO_TEST\n");
-#else
-    printf("undef MACRO_TEST\n");
-#endif
-
-#pragma pop_macro("MACRO_TEST")
-#ifdef MACRO_TEST
-    printf("define MACRO_TEST\n");
-#else
-    printf("undef MACRO_TEST\n");
-#endif
-
-#pragma pop_macro("MACRO_TEST")
-#ifdef MACRO_TEST
-    printf("define MACRO_TEST\n");
-#else
-    printf("undef MACRO_TEST\n");
-#endif
-
-/* pack test */
-#pragma pack(push, 8)
-#pragma pack(pop)
-
-    /* gcc does not support
-    #define MACRO_TEST_MACRO "MACRO_TEST"
-    #pragma push_macro(MACRO_TEST_MACRO)
-    #undef MACRO_TEST
-    #define MACRO_TEST "macro_test3\n"
-    printf(MACRO_TEST);
-    #pragma pop_macro(MACRO_TEST_MACRO)
-    printf(MACRO_TEST);
-*/
 }
 
 static void print_num(char *fn, int line, int num)
@@ -1713,6 +1664,7 @@ LONG_DOUBLE strtold(const char *nptr, char **endptr);
         printf("ftof: %f %f %Lf\n", fa, da, la);                                                \
         ia = (int) a;                                                                           \
         llia = (long long) a;                                                                   \
+        a = (a >= 0) ? a : -a;                                                                  \
         ua = (unsigned int) a;                                                                  \
         llua = (unsigned long long) a;                                                          \
         printf("ftoi: %d %u %lld %llu\n", ia, ua, llia, llua);                                  \
@@ -1751,22 +1703,6 @@ LONG_DOUBLE strtold(const char *nptr, char **endptr);
         printf("strto%s: %f\n", #prefix, (double) strto##prefix("1.2", NULL));                  \
     }                                                                                           \
                                                                                                 \
-    void prefix##calc(type x, type y)                                                           \
-    {                                                                                           \
-        x = x * x;                                                                              \
-        y = y * y;                                                                              \
-        printf("%d, %d\n", (int) x, (int) y);                                                   \
-        x = x - y;                                                                              \
-        y = y - x;                                                                              \
-        printf("%d, %d\n", (int) x, (int) y);                                                   \
-        x = x / y;                                                                              \
-        y = y / x;                                                                              \
-        printf("%d, %d\n", (int) x, (int) y);                                                   \
-        x = x + x;                                                                              \
-        y = y + y;                                                                              \
-        printf("%d, %d\n", (int) x, (int) y);                                                   \
-    }                                                                                           \
-                                                                                                \
     void prefix##signed_zeros(void)                                                             \
     {                                                                                           \
         type x = 0.0, y = -0.0, n, p;                                                           \
@@ -1801,7 +1737,6 @@ LONG_DOUBLE strtold(const char *nptr, char **endptr);
         prefix##fcast(234.6);                                                                   \
         prefix##fcast(-2334.6);                                                                 \
         prefix##call();                                                                         \
-        prefix##calc(1, 1.0000000000000001);                                                    \
         prefix##signed_zeros();                                                                 \
     }
 
@@ -2428,8 +2363,7 @@ ntf("min=%d\n", 4);
 ";
     printf("len1=%d str[0]=%d\n", strlen(str), str[0]);
 #endif
-    printf("len1=%d\n", strlen("
-a
+    printf("len1=%d\n", strlen("a
 "));
 #endif /* ACCEPT_CR_IN_STRINGS */
 }
@@ -2736,8 +2670,8 @@ static __inline__ void sigdelset1(unsigned int *set, int _sig)
 
 static __inline__ __const__ unsigned int swab32(unsigned int x)
 {
-    __asm__("xchgb %b0,%h0\n\t" /* swap lower bytes    */
-            "rorl $16,%0\n\t"   /* swap words        */
+    __asm__("xchgb %b0,%h0\n\t" /* swap lower bytes */
+            "rorl $16,%0\n\t"   /* swap words       */
             "xchgb %b0,%h0"     /* swap higher bytes    */
             : "=q"(x)
             : "0"(x));
@@ -2818,6 +2752,7 @@ int constant_p_var;
 
 void builtin_test(void)
 {
+#if GCC_MAJOR >= 3
     COMPAT_TYPE(int, int);
     COMPAT_TYPE(int, unsigned int);
     COMPAT_TYPE(int, char);
@@ -2827,9 +2762,9 @@ void builtin_test(void)
     COMPAT_TYPE(int *, void *);
     COMPAT_TYPE(int *, const int *);
     COMPAT_TYPE(char *, unsigned char *);
-    COMPAT_TYPE(char, unsigned char);
     /* space is needed because tcc preprocessor introduces a space between each token */
     COMPAT_TYPE(char **, void *);
+#endif
     printf("res = %d\n", __builtin_constant_p(1));
     printf("res = %d\n", __builtin_constant_p(1 + 2));
     printf("res = %d\n", __builtin_constant_p(&constant_p_var));

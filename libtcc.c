@@ -574,17 +574,14 @@ static void error1(TCCState *s1, int is_warning, const char *fmt, va_list ap)
     for (f = file; f && f->filename[0] == ':'; f = f->prev)
         ;
     if (f) {
-        int line_num = f->line_num;
         for (pf = s1->include_stack; pf < s1->include_stack_ptr; pf++)
             strcat_printf(buf,
                           sizeof(buf),
                           "In file included from %s:%d:\n",
                           (*pf)->filename,
                           (*pf)->line_num);
-        if (line_num > 0) {
-            if (tok == TOK_LINEFEED || (tok == CH_EOF && line_num > 1))
-                line_num--;
-            strcat_printf(buf, sizeof(buf), "%s:%d: ", f->filename, line_num);
+        if (f->line_num > 0) {
+            strcat_printf(buf, sizeof(buf), "%s:%d: ", f->filename, f->line_num);
         } else {
             strcat_printf(buf, sizeof(buf), "%s: ", f->filename);
         }
@@ -873,7 +870,6 @@ LIBTCCAPI void tcc_undefine_symbol(TCCState *s1, const char *sym)
 static void tcc_cleanup(void)
 {
     int i, n;
-    CSym *def;
     if (NULL == tcc_state)
         return;
     tcc_state = NULL;
@@ -883,11 +879,8 @@ static void tcc_cleanup(void)
 
     /* free tokens */
     n = tok_ident - TOK_IDENT;
-    for (i = 0; i < n; i++) {
-        def = &table_ident[i]->sym_define;
-        tcc_free(def->data);
+    for (i = 0; i < n; i++)
         tcc_free(table_ident[i]);
-    }
     tcc_free(table_ident);
 
     /* free sym_pools */

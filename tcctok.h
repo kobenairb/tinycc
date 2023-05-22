@@ -138,8 +138,6 @@ DEF(TOK_REGPARM2, "__regparm__")
 
 /* pragma */
 DEF(TOK_pack, "pack")
-DEF(TOK_PUSH_MACRO, "push_macro")
-DEF(TOK_POP_MACRO, "pop_macro")
 #if !defined(TCC_TARGET_I386) && !defined(TCC_TARGET_X86_64)
 /* already defined for assembler */
 DEF(TOK_ASM_push, "push")
