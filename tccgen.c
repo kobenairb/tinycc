@@ -4871,9 +4871,11 @@ static void label_or_decl(int l)
     decl(l);
 }
 
-static int case_cmp(const void *a, const void *b)
+static int case_cmp(const void *pa, const void *pb)
 {
-    return (*(struct case_t **) a)->v1 - (*(struct case_t **) b)->v1;
+    int a = (*(struct case_t **) pa)->v1;
+    int b = (*(struct case_t **) pb)->v1;
+    return a < b ? -1 : a > b;
 }
 
 static void block(int *bsym, int *csym, int is_expr)

@@ -1539,6 +1539,9 @@ void switch_test()
         case 3:
             printf("b");
             break;
+        case 0xc33c6b9fU:
+        case 0x7c9eeeb9U:
+            break;
         }
     }
     printf("\n");
