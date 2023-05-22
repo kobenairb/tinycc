@@ -452,7 +452,7 @@ ST_FUNC void relocate_syms(TCCState *s1, int do_resolve)
                 if (addr) {
                     sym->st_value = (addr_t) addr;
 #ifdef DEBUG_RELOC
-                    printf("relocate_sym: %s -> 0x%x\n", name, sym->st_value);
+                    printf("relocate_sym: %s -> 0x%lx\n", name, sym->st_value);
 #endif
                     goto found;
                 }
@@ -783,8 +783,25 @@ ST_FUNC void relocate_section(TCCState *s1, Section *s)
             break;
         case R_AARCH64_JUMP26:
         case R_AARCH64_CALL26:
-            if (((val - addr) + ((uint64_t) 1 << 27)) & ~(uint64_t) 0xffffffc)
-                tcc_error("R_AARCH64_(JUMP|CALL)26 relocation failed");
+            /* This check must match the one in build_got_entries, testing
+           if we really need a PLT slot.  */
+            if (sym->st_shndx == SHN_UNDEF)
+                /* We've put the PLT slot offset into r_addend when generating
+           it, and that's what we must use as relocation value (adjusted
+           by section offset of course).  */
+                val = s1->plt->sh_addr + rel->r_addend;
+#ifdef DEBUG_RELOC
+            printf("reloc %d @ 0x%lx: val=0x%lx name=%s\n",
+                   type,
+                   addr,
+                   val,
+                   (char *) symtab_section->link->data + sym->st_name);
+#endif
+            if (((val - addr) + ((uint64_t) 1 << 27)) & ~(uint64_t) 0xffffffc) {
+                tcc_error("R_AARCH64_(JUMP|CALL)26 relocation failed (val=%lx, addr=%lx)",
+                          addr,
+                          val);
+            }
             *(uint32_t *) ptr = 0x14000000 | (type == R_AARCH64_CALL26) << 31
                                 | ((val - addr) >> 2 & 0x3ffffff);
             break;
@@ -803,6 +820,18 @@ ST_FUNC void relocate_section(TCCState *s1, Section *s)
                                       << 7;
             break;
         case R_AARCH64_COPY:
+            break;
+        case R_AARCH64_GLOB_DAT:
+        case R_AARCH64_JUMP_SLOT:
+            /* They don't need addend */
+#ifdef DEBUG_RELOC
+            printf("reloc %d @ 0x%lx: val=0x%lx name=%s\n",
+                   type,
+                   addr,
+                   val - rel->r_addend,
+                   (char *) symtab_section->link->data + sym->st_name);
+#endif
+            *(addr_t *) ptr = val - rel->r_addend;
             break;
         default:
             fprintf(stderr,
@@ -1202,6 +1231,7 @@ static unsigned long put_got_entry(
         plt = s1->plt;
         if (plt->data_offset == 0)
             section_ptr_add(plt, 32);
+        symattr->plt_offset = plt->data_offset;
         p = section_ptr_add(plt, 16);
         put32(p, s1->got->data_offset);
         put32(p + 4, (uint64_t) s1->got->data_offset >> 32);
@@ -1359,6 +1389,22 @@ ST_FUNC void build_got_entries(TCCState *s1)
                 sym = &((ElfW(Sym) *) symtab_section->data)[sym_index];
                 reloc_type = R_AARCH64_GLOB_DAT;
                 put_got_entry(s1, reloc_type, sym->st_size, sym->st_info, sym_index);
+                break;
+
+            case R_AARCH64_JUMP26:
+            case R_AARCH64_CALL26:
+                if (!s1->got)
+                    build_got(s1);
+                sym_index = ELFW(R_SYM)(rel->r_info);
+                sym = &((ElfW(Sym) *) symtab_section->data)[sym_index];
+                if (sym->st_shndx == SHN_UNDEF) {
+                    unsigned long ofs;
+                    reloc_type = R_AARCH64_JUMP_SLOT;
+                    ofs = put_got_entry(s1, reloc_type, sym->st_size, sym->st_info, sym_index);
+                    /* We store the place of the generated PLT slot
+               in our addend.  */
+                    rel->r_addend += ofs;
+                }
                 break;
 #elif defined(TCC_TARGET_C67)
             case R_C60_GOT32:
@@ -1930,8 +1976,8 @@ ST_FUNC void relocate_plt(TCCState *s1)
         uint64_t plt = s1->plt->sh_addr;
         uint64_t got = s1->got->sh_addr;
         uint64_t off = (got >> 12) - (plt >> 12);
-        if ((off + ((uint64_t) 1 << 20)) >> 21)
-            tcc_error("Failed relocating PLT");
+        if ((off + ((uint32_t) 1 << 20)) >> 21)
+            tcc_error("Failed relocating PLT (off=0x%lx, got=0x%lx, plt=0x%lx)", off, got, plt);
         put32(p, 0xa9bf7bf0); // stp x16,x30,[sp,#-16]!
         put32(p + 4,
               (0x90000010 | // adrp x16,...
@@ -1951,8 +1997,8 @@ ST_FUNC void relocate_plt(TCCState *s1)
             uint64_t pc = plt + (p - s1->plt->data);
             uint64_t addr = got + (get32(p) | (uint64_t) get32(p + 4) << 32);
             uint32_t off = (addr >> 12) - (pc >> 12);
-            if ((off + ((uint64_t) 1 << 20)) >> 21)
-                tcc_error("Failed relocating PLT");
+            if ((off + ((uint32_t) 1 << 20)) >> 21)
+                tcc_error("Failed relocating PLT (off=0x%lx, addr=0x%lx, pc=0x%lx)", off, addr, pc);
             put32(p,
                   (0x90000010 | // adrp x16,...
                    (off & 0x1ffffc) << 3 | (off & 3) << 29));
@@ -2625,9 +2671,12 @@ static int elf_output_file(TCCState *s1, const char *filename)
             /* relocate symbols in .dynsym now that final addresses are known */
             for_each_elem(s1->dynsym, 1, sym, ElfW(Sym))
             {
-                /* relocate to PLT if symbol corresponds to a PLT entry */
                 if (sym->st_shndx == SHN_UNDEF) {
-                    if (sym->st_value)
+                    /* relocate to PLT if symbol corresponds to a PLT entry,
+               but not if it's a weak symbol */
+                    if (ELFW(ST_BIND)(sym->st_info) == STB_WEAK)
+                        sym->st_value = 0;
+                    else if (sym->st_value)
                         sym->st_value += s1->plt->sh_addr;
                 } else if (sym->st_shndx < SHN_LORESERVE) {
                     /* do symbol relocation */
