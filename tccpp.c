@@ -1449,8 +1449,11 @@ static void pragma_parse(TCCState *s1)
             tcc_warning("unbalanced #pragma pop_macro");
 
     } else if (tok == TOK_once) {
-        add_cached_include(s1, file->filename, TOK_once);
+        char buf1[sizeof file->filename];
 
+        pstrcpy(buf1, sizeof(buf1), "#once#");
+        pstrcat(buf1, sizeof(buf1), file->filename);
+        add_cached_include(s1, file->filename, tok_alloc(buf1, strlen(buf1))->tok);
     } else if (s1->ppfp) {
         /* tcc -E: keep pragmas below unchanged */
         unget_tok(' ');
@@ -1645,7 +1648,7 @@ redo:
 
             pstrcat(buf1, sizeof(buf1), buf);
             e = search_cached_include(s1, buf1);
-            if (e && (define_find(e->ifndef_macro) || e->ifndef_macro == TOK_once)) {
+            if (e && define_find(e->ifndef_macro)) {
                 /* no need to parse the include because the 'ifndef macro'
                    is defined */
 #ifdef INC_DEBUG
