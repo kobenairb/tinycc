@@ -1072,7 +1072,8 @@ ST_FUNC int gv(int rc)
             bits = 64;
         } else
             type.t = VT_INT;
-        if ((vtop->type.t & VT_UNSIGNED) || (vtop->type.t & VT_BTYPE) == VT_BOOL)
+        if ((vtop->type.t & VT_UNSIGNED) || (vtop->type.t & VT_BTYPE) == VT_BOOL
+            || (((vtop->type.t & VT_BTYPE) == VT_ENUM) && vtop->type.ref->a.unsigned_enum))
             type.t |= VT_UNSIGNED;
         gen_cast(&type);
         /* generate shifts */
