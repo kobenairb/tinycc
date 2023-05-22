@@ -534,7 +534,7 @@ ST_FUNC void put_extern_sym(Sym *sym, Section *section, addr_t value, unsigned l
 }
 
 /* add a new relocation entry to symbol 'sym' in section 's' */
-ST_FUNC void greloc(Section *s, Sym *sym, unsigned long offset, int type)
+ST_FUNC void greloca(Section *s, Sym *sym, unsigned long offset, int type, unsigned long addend)
 {
     int c = 0;
     if (sym) {
@@ -543,7 +543,12 @@ ST_FUNC void greloc(Section *s, Sym *sym, unsigned long offset, int type)
         c = sym->c;
     }
     /* now we can add ELF relocation info */
-    put_elf_reloc(symtab_section, s, offset, type, c);
+    put_elf_reloca(symtab_section, s, offset, type, c, addend);
+}
+
+ST_FUNC void greloc(Section *s, Sym *sym, unsigned long offset, int type)
+{
+    greloca(s, sym, offset, type, 0);
 }
 
 /********************************************************/

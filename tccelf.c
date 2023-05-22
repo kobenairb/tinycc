@@ -267,7 +267,8 @@ ST_FUNC int add_elf_sym(
 }
 
 /* put relocation */
-ST_FUNC void put_elf_reloc(Section *symtab, Section *s, unsigned long offset, int type, int symbol)
+ST_FUNC void put_elf_reloca(
+    Section *symtab, Section *s, unsigned long offset, int type, int symbol, unsigned long addend)
 {
     char buf[256];
     Section *sr;
@@ -289,8 +290,16 @@ ST_FUNC void put_elf_reloc(Section *symtab, Section *s, unsigned long offset, in
     rel->r_offset = offset;
     rel->r_info = ELFW(R_INFO)(symbol, type);
 #ifdef TCC_TARGET_X86_64
-    rel->r_addend = 0;
+    rel->r_addend = addend;
+#else
+    if (addend)
+        tcc_error("non-zero addend on REL architecture");
 #endif
+}
+
+ST_FUNC void put_elf_reloc(Section *symtab, Section *s, unsigned long offset, int type, int symbol)
+{
+    put_elf_reloca(symtab, s, offset, type, symbol, 0);
 }
 
 /* put stab debug information */
