@@ -1661,6 +1661,8 @@ redo:
                 tcc_error("#line");
             pstrcpy(file->filename, sizeof(file->filename), (char *) tokc.cstr->data);
         }
+        if (s1->do_debug)
+            put_stabs(file->filename, N_BINCL, 0, 0, 0);
         break;
     case TOK_ERROR:
     case TOK_WARNING:
