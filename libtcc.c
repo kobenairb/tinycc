@@ -1531,6 +1531,7 @@ enum {
     TCC_OPTION_nostdlib,
     TCC_OPTION_print_search_dirs,
     TCC_OPTION_rdynamic,
+    TCC_OPTION_param,
     TCC_OPTION_pedantic,
     TCC_OPTION_pthread,
     TCC_OPTION_run,
@@ -1576,6 +1577,7 @@ static const TCCOption tcc_options[] = {
     {"shared", TCC_OPTION_shared, 0},
     {"soname", TCC_OPTION_soname, TCC_OPTION_HAS_ARG},
     {"o", TCC_OPTION_o, TCC_OPTION_HAS_ARG},
+    {"-param", TCC_OPTION_param, TCC_OPTION_HAS_ARG},
     {"pedantic", TCC_OPTION_pedantic, 0},
     {"pthread", TCC_OPTION_pthread, 0},
     {"run", TCC_OPTION_run, TCC_OPTION_HAS_ARG | TCC_OPTION_NOSEP},
@@ -1777,6 +1779,8 @@ PUB_FUNC int tcc_parse_args(TCCState *s, int argc, char **argv)
             s->soname = tcc_strdup(optarg);
             break;
         case TCC_OPTION_m:
+            if (strcmp(optarg, "32") && strcmp(optarg, "64"))
+                goto unsupported_option;
             s->option_m = tcc_strdup(optarg);
             break;
         case TCC_OPTION_o:
