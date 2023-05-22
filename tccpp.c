@@ -762,7 +762,8 @@ redo_start:
                     goto redo_start;
                 else if (parse_flags & PARSE_FLAG_ASM_COMMENTS)
                     p = parse_line_comment(p);
-            }
+            } else if (parse_flags & PARSE_FLAG_ASM_FILE)
+                p = parse_line_comment(p);
             break;
         _default:
         default:
@@ -1408,7 +1409,7 @@ ST_FUNC void preprocess(int is_bof)
 
     saved_parse_flags = parse_flags;
     parse_flags = PARSE_FLAG_PREPROCESS | PARSE_FLAG_TOK_NUM | PARSE_FLAG_LINEFEED;
-    parse_flags |= (saved_parse_flags & PARSE_FLAG_ASM_COMMENTS);
+    parse_flags |= (saved_parse_flags & (PARSE_FLAG_ASM_FILE | PARSE_FLAG_ASM_COMMENTS));
     next_nomacro();
 redo:
     switch (tok) {
@@ -2233,7 +2234,10 @@ redo_no_start:
     case '#':
         /* XXX: simplify */
         PEEKC(c, p);
-        if ((tok_flags & TOK_FLAG_BOL) && (parse_flags & PARSE_FLAG_PREPROCESS)) {
+        if (is_space(c) && (parse_flags & PARSE_FLAG_ASM_FILE)) {
+            p = parse_line_comment(p);
+            goto redo_no_start;
+        } else if ((tok_flags & TOK_FLAG_BOL) && (parse_flags & PARSE_FLAG_PREPROCESS)) {
             file->buf_ptr = p;
             preprocess(tok_flags & TOK_FLAG_BOF);
             p = file->buf_ptr;
@@ -2602,7 +2606,12 @@ redo_no_start:
         p++;
         break;
     default:
-        tcc_error("unrecognized character \\x%02x", c);
+        if ((parse_flags & PARSE_FLAG_ASM_FILE) == 0)
+            tcc_error("unrecognized character \\x%02x", c);
+        else {
+            tok = ' ';
+            p++;
+        }
         break;
     }
     tok_flags = 0;
@@ -3220,8 +3229,9 @@ ST_FUNC int tcc_preprocess(TCCState *s1)
     preprocess_init(s1);
     ch = file->buf_ptr[0];
     tok_flags = TOK_FLAG_BOL | TOK_FLAG_BOF;
-    parse_flags = PARSE_FLAG_ASM_COMMENTS | PARSE_FLAG_PREPROCESS | PARSE_FLAG_LINEFEED
-                  | PARSE_FLAG_SPACES;
+    parse_flags = (parse_flags & PARSE_FLAG_ASM_FILE);
+    parse_flags |= PARSE_FLAG_ASM_COMMENTS | PARSE_FLAG_PREPROCESS | PARSE_FLAG_LINEFEED
+                   | PARSE_FLAG_SPACES;
     token_seen = 0;
     file->line_ref = 0;
     file_ref = NULL;
