@@ -526,7 +526,7 @@ ST_FUNC void vpushv(SValue *v)
     *vtop = *v;
 }
 
-static void vdup(void)
+ST_FUNC void vdup(void)
 {
     vpushv(vtop);
 }
@@ -4204,6 +4204,7 @@ tok_next:
             SValue ret;
             Sym *sa;
             int nb_args, ret_nregs, ret_align, regsize, variadic;
+            RegArgs args;
 
             /* function call  */
             if ((vtop->type.t & VT_BTYPE) != VT_FUNC) {
@@ -4228,7 +4229,9 @@ tok_next:
             /* compute first implicit argument if a structure is returned */
             if ((s->type.t & VT_BTYPE) == VT_STRUCT) {
                 variadic = (s->c == FUNC_ELLIPSIS);
-                ret_nregs = gfunc_sret(&s->type, variadic, &ret.type, &ret_align, &regsize);
+                gfunc_sret(&s->type, variadic, &ret.type, &ret_align, &regsize, &args);
+                ret_nregs = regargs_nregs(&args);
+
                 if (!ret_nregs) {
                     /* get some space for the returned structure */
                     size = type_size(&s->type, &align);
@@ -4306,6 +4309,9 @@ tok_next:
             /* handle packed struct return */
             if (((s->type.t & VT_BTYPE) == VT_STRUCT) && ret_nregs) {
                 int addr, offset;
+#if defined(TCC_TARGET_X86_64) && !defined(TCC_TARGET_PE)
+                int i;
+#endif
 
                 size = type_size(&s->type, &align);
                 /* We're writing whole regs often, make sure there's enough
@@ -4314,6 +4320,34 @@ tok_next:
                     align = regsize;
                 loc = (loc - size) & -align;
                 addr = loc;
+#if defined(TCC_TARGET_X86_64) && !defined(TCC_TARGET_PE)
+                for (i = 0; i < REG_ARGS_MAX; i++) {
+                    offset = args.ireg[i];
+
+                    if (offset == -1)
+                        break;
+
+                    ret.type.t = VT_LLONG;
+                    vset(&ret.type, VT_LOCAL | VT_LVAL, addr + offset);
+                    vsetc(&ret.type, i ? REG_LRET : REG_IRET, &ret.c);
+                    vstore();
+                    vtop--;
+                    vtop--;
+                }
+                for (i = 0; i < REG_ARGS_MAX; i++) {
+                    offset = args.freg[i];
+
+                    if (offset == -1)
+                        break;
+
+                    ret.type.t = VT_DOUBLE;
+                    vset(&ret.type, VT_LOCAL | VT_LVAL, addr + offset);
+                    vsetc(&ret.type, i ? REG_QRET : REG_FRET, &ret.c);
+                    vstore();
+                    vtop--;
+                    vtop--;
+                }
+#else
                 offset = 0;
                 for (;;) {
                     vset(&ret.type, VT_LOCAL | VT_LVAL, addr + offset);
@@ -4324,6 +4358,7 @@ tok_next:
                         break;
                     offset += regsize;
                 }
+#endif
                 vset(&s->type, VT_LOCAL | VT_LVAL, addr);
             }
         } else {
@@ -4887,7 +4922,10 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
             if ((func_vt.t & VT_BTYPE) == VT_STRUCT) {
                 CType type, ret_type;
                 int ret_align, ret_nregs, regsize;
-                ret_nregs = gfunc_sret(&func_vt, func_var, &ret_type, &ret_align, &regsize);
+                RegArgs args;
+
+                gfunc_sret(&func_vt, func_var, &ret_type, &ret_align, &regsize, &args);
+                ret_nregs = regargs_nregs(&args);
                 if (0 == ret_nregs) {
                     /* if returning structure, must copy it to implicit
                        first pointer arg location */
@@ -4901,6 +4939,9 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
                 } else {
                     /* returning structure packed into registers */
                     int r, size, addr, align;
+#if defined(TCC_TARGET_X86_64) && !defined(TCC_TARGET_PE)
+                    int i;
+#endif
                     size = type_size(&func_vt, &align);
                     if ((vtop->r != (VT_LOCAL | VT_LVAL) || (vtop->c.i & (ret_align - 1)))
                         && (align & (ret_align - 1))) {
@@ -4914,6 +4955,39 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
                         vset(&ret_type, VT_LOCAL | VT_LVAL, addr);
                     }
                     vtop->type = ret_type;
+#if defined(TCC_TARGET_X86_64) && !defined(TCC_TARGET_PE)
+                    for (i = 0; i < REG_ARGS_MAX; i++) {
+                        int off = args.ireg[i];
+
+                        if (off == -1)
+                            break;
+
+                        r = i ? RC_LRET : RC_IRET;
+
+                        vdup();
+                        vtop->c.i += off;
+                        vtop->type.t = VT_LLONG;
+                        gv(r);
+                        vpop();
+                    }
+                    for (i = 0; i < REG_ARGS_MAX; i++) {
+                        int off = args.freg[i];
+
+                        if (off == -1)
+                            break;
+
+                        /* We assume that when a structure is returned in multiple
+                           registers, their classes are consecutive values of the
+                           suite s(n) = 2^n */
+                        r = rc_fret(ret_type.t) << i;
+
+                        vdup();
+                        vtop->c.i += off;
+                        vtop->type.t = VT_DOUBLE;
+                        gv(r);
+                        vpop();
+                    }
+#else
                     if (is_float(ret_type.t))
                         r = rc_fret(ret_type.t);
                     else
@@ -4930,6 +5004,7 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
                         vtop->c.i += regsize;
                         vtop->r = VT_LOCAL | VT_LVAL;
                     }
+#endif
                 }
             } else if (is_float(func_vt.t)) {
                 gv(rc_fret(func_vt.t));
