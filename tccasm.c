@@ -473,18 +473,20 @@ static void asm_parse_directive(TCCState *s1)
         goto zero_pad;
     } break;
     case TOK_ASM_globl:
-    case TOK_ASM_global: {
-        Sym *sym;
+    case TOK_ASM_global:
+        do {
+            Sym *sym;
 
-        next();
-        sym = label_find(tok);
-        if (!sym) {
-            sym = label_push(&s1->asm_labels, tok, 0);
-            sym->type.t = VT_VOID;
-        }
-        sym->type.t &= ~VT_STATIC;
-        next();
-    } break;
+            next();
+            sym = label_find(tok);
+            if (!sym) {
+                sym = label_push(&s1->asm_labels, tok, 0);
+                sym->type.t = VT_VOID;
+            }
+            sym->type.t &= ~VT_STATIC;
+            next();
+        } while (tok == ',');
+        break;
     case TOK_ASM_string:
     case TOK_ASM_ascii:
     case TOK_ASM_asciz: {
