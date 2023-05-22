@@ -59,6 +59,8 @@
 
 #include "tcclib.h"
 
+#include "tcctest.h"
+
 void intdiv_test();
 void string_test();
 void expr_test();
@@ -391,6 +393,11 @@ comment
     /* And again when the name and parenthes are separated by a
        comment.  */
     TEST2 /* the comment */ ();
+
+    printf("%s\n", get_basefile_from_header());
+    printf("%s\n", __BASE_FILE__);
+    printf("%s\n", get_file_from_header());
+    printf("%s\n", __FILE__);
 }
 
 static void print_num(char *fn, int line, int num)
