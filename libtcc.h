@@ -33,7 +33,7 @@ LIBTCCAPI void tcc_set_error_func(TCCState *s,
 LIBTCCAPI int tcc_set_warning(TCCState *s, const char *warning_name, int value);
 
 /* set linker option */
-LIBTCCAPI const char *tcc_set_linker(TCCState *s, const char *option, int multi);
+LIBTCCAPI const char *tcc_set_linker(TCCState *s, char *option, int multi);
 
 /*****************************/
 /* preprocessor */

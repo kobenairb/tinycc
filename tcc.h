@@ -472,6 +472,10 @@ struct TCCState
     unsigned long text_addr;
     int has_text_addr;
 
+    /* symbols to call at load-time / unload-time */
+    const char *init_symbol;
+    const char *fini_symbol;
+
     /* output format, see TCC_OUTPUT_FORMAT_xxx */
     int output_format;
 

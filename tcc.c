@@ -362,7 +362,7 @@ static int parse_args(TCCState *s, int argc, char **argv)
                 s->rdynamic = 1;
                 break;
             case TCC_OPTION_Wl: {
-                if ((r = (char *) tcc_set_linker(s, optarg, TRUE)))
+                if ((r = (char *) tcc_set_linker(s, (char *) optarg, TRUE)))
                     error("unsupported linker option '%s'", r);
             } break;
             case TCC_OPTION_E:
