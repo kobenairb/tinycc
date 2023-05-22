@@ -624,7 +624,7 @@ static int pe_write(struct pe_info *pe)
 
     op = fopen(pe->filename, "wb");
     if (NULL == op) {
-        error_noabort("could not write '%s': %s", pe->filename, strerror(errno));
+        tcc_error_noabort("could not write '%s': %s", pe->filename, strerror(errno));
         return -1;
     }
 
@@ -879,7 +879,7 @@ static void pe_build_imports(struct pe_info *pe)
                         v = (ADDR3264) GetProcAddress(dllref->handle, name);
                     }
                     if (!v)
-                        error_noabort("undefined symbol '%s'", name);
+                        tcc_error_noabort("undefined symbol '%s'", name);
                 }
 #endif
             } else {
@@ -979,7 +979,7 @@ static void pe_build_exports(struct pe_info *pe)
     strcpy(tcc_fileextension(buf), ".def");
     op = fopen(buf, "w");
     if (NULL == op) {
-        error_noabort("could not create '%s': %s", buf, strerror(errno));
+        tcc_error_noabort("could not create '%s': %s", buf, strerror(errno));
     } else {
         fprintf(op, "LIBRARY %s\n\nEXPORTS\n", dllname);
         if (pe->s1->verbose)
@@ -1326,7 +1326,7 @@ static int pe_check_symbols(struct pe_info *pe)
             }
 
         not_found:
-            error_noabort("undefined symbol '%s'", name);
+            tcc_error_noabort("undefined symbol '%s'", name);
             ret = -1;
 
         } else if (pe->s1->rdynamic && ELFW(ST_BIND)(sym->st_info) != STB_LOCAL) {
@@ -1795,7 +1795,7 @@ static void pe_add_runtime_ex(TCCState *s1, struct pe_info *pe)
                 if (PE_DLL != pe_type && PE_GUI != pe_type)
                     break;
             } else if (tcc_add_library(s1, p) < 0)
-                error_noabort("cannot find library: %s", p);
+                tcc_error_noabort("cannot find library: %s", p);
         }
     }
 
@@ -1895,7 +1895,7 @@ ST_FUNC int pe_output_file(TCCState *s1, const char *filename)
         tcc_free(pe.sec_info);
     } else {
 #ifndef TCC_IS_NATIVE
-        error_noabort("-run supported only on native platform");
+        tcc_error_noabort("-run supported only on native platform");
 #endif
         pe.thunk = data_section;
         pe_build_imports(&pe);
