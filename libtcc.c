@@ -770,6 +770,7 @@ LIBTCCAPI TCCState *tcc_new(void)
     define_push(TOK___FILE__, MACRO_OBJ, NULL, NULL);
     define_push(TOK___DATE__, MACRO_OBJ, NULL, NULL);
     define_push(TOK___TIME__, MACRO_OBJ, NULL, NULL);
+    define_push(TOK___COUNTER__, MACRO_OBJ, NULL, NULL);
     {
         /* define __TINYC__ 92X  */
         char buffer[32];
