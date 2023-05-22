@@ -4848,6 +4848,7 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
     CType *t1;
 
     if (type->t & VT_VLA) {
+#if defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64
         int a;
         CValue retcval;
 
@@ -4862,6 +4863,9 @@ static void decl_initializer(CType *type, Section *sec, unsigned long c, int fir
         vswap();
         vstore();
         vpop();
+#else
+        error("variable length arrays unsupported for this target");
+#endif
     } else if (type->t & VT_ARRAY) {
         s = type->ref;
         n = s->c;
