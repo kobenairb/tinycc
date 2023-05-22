@@ -611,9 +611,10 @@ struct TCCState
     int symbolic;      /* if true, resolve symbols in the current module first */
     int alacarte_link; /* if true, only link in referenced objects from archive */
 
-    char *tcc_lib_path; /* CONFIG_TCCDIR or -B option */
-    char *soname;       /* as specified on the command line (-soname) */
-    char *rpath;        /* as specified on the command line (-Wl,-rpath=) */
+    char *tcc_lib_path;   /* CONFIG_TCCDIR or -B option */
+    char *soname;         /* as specified on the command line (-soname) */
+    char *rpath;          /* as specified on the command line (-Wl,-rpath=) */
+    int enable_new_dtags; /* ditto, (-Wl,--enable-new-dtags) */
 
     /* output type, see TCC_OUTPUT_XXX */
     int output_type;
