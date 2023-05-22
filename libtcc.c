@@ -1039,7 +1039,6 @@ LIBTCCAPI TCCState *tcc_new(void)
                                       SHF_PRIVATE);
     s->alacarte_link = 1;
     s->nocommon = 1;
-    s->section_align = ELF_PAGE_SIZE;
 
 #ifdef CHAR_IS_UNSIGNED
     s->char_is_unsigned = 1;
