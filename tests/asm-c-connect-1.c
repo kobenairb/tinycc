@@ -17,6 +17,7 @@ asm(".text;"_
     "x1_c; ret");
 
 void callx4(void);
+void callx5_again(void);
 int main(int argc, char *argv[])
 {
     asm("call "_
@@ -26,6 +27,9 @@ int main(int argc, char *argv[])
     asm("call "_
         "x3");
     callx4();
+    asm("call "_
+        "x5");
+    callx5_again();
     return 0;
 }
 
@@ -40,4 +44,10 @@ extern int x3(void);
 void x4(void)
 {
     printf("x4\n");
+}
+
+void x5(void);
+void x5(void)
+{
+    printf("x5\n");
 }
