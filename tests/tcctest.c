@@ -1664,7 +1664,6 @@ LONG_DOUBLE strtold(const char *nptr, char **endptr);
         printf("ftof: %f %f %Lf\n", fa, da, la);                                                \
         ia = (int) a;                                                                           \
         llia = (long long) a;                                                                   \
-        a = (a >= 0) ? a : -a;                                                                  \
         ua = (unsigned int) a;                                                                  \
         llua = (unsigned long long) a;                                                          \
         printf("ftoi: %d %u %lld %llu\n", ia, ua, llia, llua);                                  \
@@ -1703,6 +1702,22 @@ LONG_DOUBLE strtold(const char *nptr, char **endptr);
         printf("strto%s: %f\n", #prefix, (double) strto##prefix("1.2", NULL));                  \
     }                                                                                           \
                                                                                                 \
+    void prefix##calc(type x, type y)                                                           \
+    {                                                                                           \
+        x = x * x;                                                                              \
+        y = y * y;                                                                              \
+        printf("%d, %d\n", (int) x, (int) y);                                                   \
+        x = x - y;                                                                              \
+        y = y - x;                                                                              \
+        printf("%d, %d\n", (int) x, (int) y);                                                   \
+        x = x / y;                                                                              \
+        y = y / x;                                                                              \
+        printf("%d, %d\n", (int) x, (int) y);                                                   \
+        x = x + x;                                                                              \
+        y = y + y;                                                                              \
+        printf("%d, %d\n", (int) x, (int) y);                                                   \
+    }                                                                                           \
+                                                                                                \
     void prefix##signed_zeros(void)                                                             \
     {                                                                                           \
         type x = 0.0, y = -0.0, n, p;                                                           \
@@ -1737,6 +1752,7 @@ LONG_DOUBLE strtold(const char *nptr, char **endptr);
         prefix##fcast(234.6);                                                                   \
         prefix##fcast(-2334.6);                                                                 \
         prefix##call();                                                                         \
+        prefix##calc(1, 1.0000000000000001);                                                    \
         prefix##signed_zeros();                                                                 \
     }
 
@@ -2752,7 +2768,6 @@ int constant_p_var;
 
 void builtin_test(void)
 {
-#if GCC_MAJOR >= 3
     COMPAT_TYPE(int, int);
     COMPAT_TYPE(int, unsigned int);
     COMPAT_TYPE(int, char);
@@ -2762,9 +2777,9 @@ void builtin_test(void)
     COMPAT_TYPE(int *, void *);
     COMPAT_TYPE(int *, const int *);
     COMPAT_TYPE(char *, unsigned char *);
+    COMPAT_TYPE(char, unsigned char);
     /* space is needed because tcc preprocessor introduces a space between each token */
     COMPAT_TYPE(char **, void *);
-#endif
     printf("res = %d\n", __builtin_constant_p(1));
     printf("res = %d\n", __builtin_constant_p(1 + 2));
     printf("res = %d\n", __builtin_constant_p(&constant_p_var));
