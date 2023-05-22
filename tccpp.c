@@ -2563,10 +2563,13 @@ redo_no_start:
             goto parse_num;
         } else if (c == '.') {
             PEEKC(c, p);
-            if (c != '.')
-                expect("'.'");
-            PEEKC(c, p);
-            tok = TOK_DOTS;
+            if (c == '.') {
+                p++;
+                tok = TOK_DOTS;
+            } else {
+                *--p = '.'; /* may underflow into file->unget[] */
+                tok = '.';
+            }
         } else {
             tok = '.';
         }
