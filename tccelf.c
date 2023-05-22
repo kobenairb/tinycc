@@ -575,6 +575,9 @@ ST_FUNC void relocate_section(TCCState *s1, Section *s)
                 goto output_file;
             write16le(ptr, read16le(ptr) + val - addr);
             break;
+        case R_386_RELATIVE:
+            /* do nothing */
+            break;
         default:
             fprintf(stderr,
                     "FIXME: handle reloc type %d at %x [%p] to %x\n",
