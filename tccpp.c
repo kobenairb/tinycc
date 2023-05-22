@@ -264,7 +264,6 @@ ST_FUNC const char *get_tok_str(int v, CValue *cv)
 {
     static char buf[STRING_MAX_SIZE + 1];
     static CString cstr_buf;
-    CString *cstr;
     char *p;
     int i, len;
 
@@ -299,20 +298,19 @@ ST_FUNC const char *get_tok_str(int v, CValue *cv)
         break;
     case TOK_PPNUM:
     case TOK_PPSTR:
-        return (char *) cv->cstr->data;
+        return (char *) cv->str.data;
     case TOK_LSTR:
         cstr_ccat(&cstr_buf, 'L');
     case TOK_STR:
-        cstr = cv->cstr;
         cstr_ccat(&cstr_buf, '\"');
         if (v == TOK_STR) {
-            len = cstr->size - 1;
+            len = cv->str.size - 1;
             for (i = 0; i < len; i++)
-                add_char(&cstr_buf, ((unsigned char *) cstr->data)[i]);
+                add_char(&cstr_buf, ((unsigned char *) cv->str.data)[i]);
         } else {
-            len = (cstr->size / sizeof(nwchar_t)) - 1;
+            len = (cv->str.size / sizeof(nwchar_t)) - 1;
             for (i = 0; i < len; i++)
-                add_char(&cstr_buf, ((nwchar_t *) cstr->data)[i]);
+                add_char(&cstr_buf, ((nwchar_t *) cv->str.data)[i]);
         }
         cstr_ccat(&cstr_buf, '\"');
         cstr_ccat(&cstr_buf, '\0');
@@ -910,20 +908,12 @@ static void tok_str_add2(TokenString *s, int t, CValue *cv)
     case TOK_PPSTR:
     case TOK_STR:
     case TOK_LSTR: {
-        int nb_words;
-        CString cstr;
-
-        nb_words = (sizeof(CString) + cv->cstr->size + 3) >> 2;
+        /* Insert the string into the int array. */
+        size_t nb_words = 1 + (cv->str.size + sizeof(int) - 1) / sizeof(int);
         while ((len + nb_words) > s->allocated_len)
             str = tok_str_realloc(s);
-        /* XXX: Insert the CString into the int array.
-               It may end up incorrectly aligned. */
-        cstr.data = 0;
-        cstr.size = cv->cstr->size;
-        cstr.data_allocated = 0;
-        cstr.size_allocated = cstr.size;
-        memcpy(str + len, &cstr, sizeof(CString));
-        memcpy((char *) (str + len) + sizeof(CString), cv->cstr->data, cstr.size);
+        str[len] = cv->str.size;
+        memcpy(&str[len + 1], cv->str.data, cv->str.size);
         len += nb_words;
     } break;
     case TOK_CDOUBLE:
@@ -991,10 +981,10 @@ static inline void TOK_GET(int *t, const int **pp, CValue *cv)
     case TOK_LSTR:
     case TOK_PPNUM:
     case TOK_PPSTR:
-        /* XXX: Illegal cast: the pointer p may not be correctly aligned! */
-        cv->cstr = (CString *) p;
-        cv->cstr->data = (char *) p + sizeof(CString);
-        p += (sizeof(CString) + cv->cstr->size + 3) >> 2;
+        cv->str.size = *p++;
+        cv->str.data = p;
+        cv->str.data_allocated = 0;
+        p += (cv->str.size + sizeof(int) - 1) / sizeof(int);
         break;
     case TOK_CDOUBLE:
     case TOK_CLLONG:
@@ -1430,7 +1420,7 @@ static void pragma_parse(TCCState *s1)
             goto pragma_err;
         if (next(), tok != TOK_STR)
             goto pragma_err;
-        v = tok_alloc(tokc.cstr->data, tokc.cstr->size - 1)->tok;
+        v = tok_alloc(tokc.str.data, tokc.str.size - 1)->tok;
         if (next(), tok != ')')
             goto pragma_err;
         if (t == TOK_push_macro) {
@@ -1506,7 +1496,7 @@ static void pragma_parse(TCCState *s1)
         skip(',');
         if (tok != TOK_STR)
             goto pragma_err;
-        file = tcc_strdup((char *) tokc.cstr->data);
+        file = tcc_strdup((char *) tokc.str.data);
         dynarray_add((void ***) &s1->pragma_libs, &s1->nb_pragma_libs, file);
         next();
         if (tok != ')')
@@ -1590,7 +1580,7 @@ redo:
                     include_syntax:
                         tcc_error("'#include' expects \"FILENAME\" or <FILENAME>");
                     }
-                    pstrcat(buf, sizeof(buf), (char *) tokc.cstr->data);
+                    pstrcat(buf, sizeof(buf), (char *) tokc.str.data);
                     next();
                 }
                 c = '\"';
@@ -1747,7 +1737,7 @@ redo:
         }
         break;
     case TOK_PPNUM:
-        n = strtoul((char *) tokc.cstr->data, &q, 10);
+        n = strtoul((char *) tokc.str.data, &q, 10);
         goto _line_num;
     case TOK_LINE:
         next();
@@ -1759,7 +1749,7 @@ redo:
         next();
         if (tok != TOK_LINEFEED) {
             if (tok == TOK_STR)
-                pstrcpy(file->filename, sizeof(file->filename), (char *) tokc.cstr->data);
+                pstrcpy(file->filename, sizeof(file->filename), (char *) tokc.str.data);
             else if (parse_flags & PARSE_FLAG_ASM_FILE)
                 break;
             else
@@ -1968,7 +1958,9 @@ void parse_string(const char *s, int len)
             tok = TOK_LCHAR;
         }
     } else {
-        tokc.cstr = &tokcstr;
+        tokc.str.size = tokcstr.size;
+        tokc.str.data = tokcstr.data;
+        tokc.str.data_allocated = tokcstr.data_allocated;
         if (!is_long)
             tok = TOK_STR;
         else
@@ -2550,7 +2542,9 @@ redo_no_start:
         }
         /* We add a trailing '\0' to ease parsing */
         cstr_ccat(&tokcstr, '\0');
-        tokc.cstr = &tokcstr;
+        tokc.str.size = tokcstr.size;
+        tokc.str.data = tokcstr.data;
+        tokc.str.data_allocated = tokcstr.data_allocated;
         tok = TOK_PPNUM;
         break;
 
@@ -2585,7 +2579,9 @@ redo_no_start:
         p = parse_pp_string(p, c, &tokcstr);
         cstr_ccat(&tokcstr, c);
         cstr_ccat(&tokcstr, '\0');
-        tokc.cstr = &tokcstr;
+        tokc.str.size = tokcstr.size;
+        tokc.str.data = tokcstr.data;
+        tokc.str.data_allocated = tokcstr.data_allocated;
         tok = TOK_PPSTR;
         break;
 
@@ -2813,9 +2809,11 @@ static int *macro_arg_subst(Sym **nested_list, const int *macro_str, Sym *args)
                 printf("\nstringize: <%s>\n", (char *) cstr.data);
 #endif
                 /* add string */
-                cval.cstr = &cstr;
+                cval.str.size = cstr.size;
+                cval.str.data = cstr.data;
+                cval.str.data_allocated = cstr.data_allocated;
                 tok_str_add2(&str, TOK_PPSTR, &cval);
-                cstr_free(cval.cstr);
+                tcc_free(cval.str.data_allocated);
             } else {
             bad_stringy:
                 expect("macro parameter after '#'");
@@ -2975,7 +2973,9 @@ static int macro_subst_tok(TokenString *tok_str, Sym **nested_list, Sym *s, int 
         cstr_new(&cstr);
         cstr_cat(&cstr, cstrval);
         cstr_ccat(&cstr, '\0');
-        cval.cstr = &cstr;
+        cval.str.size = cstr.size;
+        cval.str.data = cstr.data;
+        cval.str.data_allocated = cstr.data_allocated;
         tok_str_add2(tok_str, t1, &cval);
         cstr_free(&cstr);
     } else {
@@ -3296,10 +3296,10 @@ redo:
     /* convert preprocessor tokens into C tokens */
     if (tok == TOK_PPNUM) {
         if (parse_flags & PARSE_FLAG_TOK_NUM)
-            parse_number((char *) tokc.cstr->data);
+            parse_number((char *) tokc.str.data);
     } else if (tok == TOK_PPSTR) {
         if (parse_flags & PARSE_FLAG_TOK_STR)
-            parse_string((char *) tokc.cstr->data, tokc.cstr->size - 1);
+            parse_string((char *) tokc.str.data, tokc.str.size - 1);
     }
 }
 
