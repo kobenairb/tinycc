@@ -107,7 +107,7 @@ union double_long {
 
 union float_long {
     float f;
-    long l;
+    unsigned int l;
 };
 
 /* XXX: we don't support several builtin supports for now */
