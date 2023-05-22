@@ -1051,6 +1051,11 @@ int pad1;
    a copy of it).
 struct aligntest7 altest7[2] __attribute__((aligned(16)));*/
 
+struct aligntest8
+{
+    int i;
+} __attribute__((aligned(4096)));
+
 struct Large
 {
     unsigned long flags;
@@ -1142,6 +1147,9 @@ void struct_test()
     printf("aligntest7 sizeof=%d alignof=%d\n",
            sizeof(struct aligntest7),
            __alignof__(struct aligntest7));
+    printf("aligntest8 sizeof=%d alignof=%d\n",
+           sizeof(struct aligntest8),
+           __alignof__(struct aligntest8));
     printf("altest5 sizeof=%d alignof=%d\n", sizeof(altest5), __alignof__(altest5));
     printf("altest6 sizeof=%d alignof=%d\n", sizeof(altest6), __alignof__(altest6));
     /*printf("altest7 sizeof=%d alignof=%d\n",

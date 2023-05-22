@@ -3088,6 +3088,24 @@ ST_FUNC void parse_mult_str(CString *astr, const char *msg)
     cstr_ccat(astr, '\0');
 }
 
+/* If I is >= 1 and a power of two, returns log2(i)+1.
+   If I is 0 returns 0.  */
+static int exact_log2p1(int i)
+{
+    int ret;
+    if (!i)
+        return 0;
+    for (ret = 1; i >= 1 << 8; ret += 8)
+        i >>= 8;
+    if (i >= 1 << 4)
+        ret += 4, i >>= 4;
+    if (i >= 1 << 2)
+        ret += 2, i >>= 2;
+    if (i >= 1 << 1)
+        ret++;
+    return ret;
+}
+
 /* Parse GNUC __attribute__ extension. Currently, the following
    extensions are recognized:
    - aligned(n) : set data/function alignment.
@@ -3156,7 +3174,9 @@ static void parse_attribute(AttributeDef *ad)
                 } else {
                     n = MAX_ALIGN;
                 }
-                ad->a.aligned = n;
+                ad->a.aligned = exact_log2p1(n);
+                if (n != 1 << (ad->a.aligned - 1))
+                    tcc_error("alignment of %d is larger than implemented", n);
                 break;
             case TOK_PACKED1:
             case TOK_PACKED2:
@@ -3293,7 +3313,7 @@ static void struct_layout(CType *type, AttributeDef *ad)
     int pcc = !tcc_state->ms_bitfields;
     Sym *f;
     if (ad->a.aligned)
-        maxalign = ad->a.aligned;
+        maxalign = 1 << (ad->a.aligned - 1);
     else
         maxalign = 1;
     offset = 0;
@@ -3316,6 +3336,8 @@ static void struct_layout(CType *type, AttributeDef *ad)
             align = f->r;
         } else if (ad->a.packed || f->r == 1) {
             align = 1;
+            /* Packed fields or packed records don't let the base type
+           influence the records type alignment.  */
             typealign = 1;
         } else {
             align = typealign;
@@ -3599,8 +3621,9 @@ do_decl:
                     /* Only remember non-default alignment.  */
                     alignoverride = 0;
                     if (ad1.a.aligned) {
-                        if (align < ad1.a.aligned)
-                            alignoverride = ad1.a.aligned;
+                        int speca = 1 << (ad1.a.aligned - 1);
+                        if (align < speca)
+                            alignoverride = speca;
                     } else if (ad1.a.packed || ad->a.packed) {
                         alignoverride = 1;
                     } else if (*tcc_state->pack_stack_ptr) {
@@ -6545,8 +6568,9 @@ static void decl_initializer_alloc(
         size += flexible_array->type.ref->c * pointed_size(&flexible_array->type);
     /* take into account specified alignment if bigger */
     if (ad->a.aligned) {
-        if (ad->a.aligned > align)
-            align = ad->a.aligned;
+        int speca = 1 << (ad->a.aligned - 1);
+        if (speca > align)
+            align = speca;
     } else if (ad->a.packed) {
         align = 1;
     }
