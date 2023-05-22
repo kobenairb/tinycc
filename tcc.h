@@ -227,8 +227,9 @@ typedef struct Sym
     char *asm_label; /* associated asm label */
     long r;          /* associated register */
     union {
-        long c; /* associated number */
-        int *d; /* define token stream */
+        long c;    /* associated number */
+        int *d;    /* define token stream */
+        SValue *s; /* associated stack value */
     };
     CType type; /* associated type */
     union {
@@ -632,6 +633,7 @@ struct TCCState
 #define VT_BTYPE 0x000f    /* mask for basic type */
 #define VT_UNSIGNED 0x0010 /* unsigned type */
 #define VT_ARRAY 0x0020    /* array type (also has VT_PTR) */
+#define VT_VLA 0x20000     /* VLA type (also has VT_PTR and VT_ARRAY) */
 #define VT_BITFIELD 0x0040 /* bitfield modifier */
 #define VT_CONSTANT 0x0800 /* const modifier */
 #define VT_VOLATILE 0x1000 /* volatile modifier */
@@ -646,7 +648,7 @@ struct TCCState
 #define VT_EXPORT 0x00008000  /* win32: data exported from dll */
 #define VT_WEAK 0x00010000    /* win32: data exported from dll */
 
-#define VT_STRUCT_SHIFT 17 /* shift for bitfield shift values */
+#define VT_STRUCT_SHIFT 18 /* shift for bitfield shift values */
 
 /* type mask (except storage) */
 #define VT_STORAGE \
