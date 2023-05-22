@@ -5754,7 +5754,7 @@ static void init_putv(CType *type, Section *sec, unsigned long c, int v, int exp
         /* XXX: make code faster ? */
         if (!(type->t & VT_BITFIELD)) {
             bit_pos = 0;
-            bit_size = 32;
+            bit_size = PTR_SIZE * 8;
             bit_mask = -1LL;
         } else {
             bit_pos = (vtop->type.t >> VT_STRUCT_SHIFT) & 0x3f;
@@ -5762,8 +5762,13 @@ static void init_putv(CType *type, Section *sec, unsigned long c, int v, int exp
             bit_mask = (1LL << bit_size) - 1;
         }
         if ((vtop->r & VT_SYM)
-            && (bt == VT_BYTE || bt == VT_SHORT || bt == VT_DOUBLE || bt == VT_LDOUBLE
-                || bt == VT_LLONG || (bt == VT_INT && bit_size != 32)))
+            && (bt == VT_BYTE || bt == VT_SHORT || bt == VT_DOUBLE || bt == VT_LDOUBLE ||
+#if PTR_SIZE == 8
+                (bt == VT_LLONG && bit_size != 64) || bt == VT_INT
+#else
+                bt == VT_LLONG || (bt == VT_INT && bit_size != 32)
+#endif
+                ))
             tcc_error("initializer element is not computable at load time");
         switch (bt) {
             /* XXX: when cross-compiling we assume that each type has the
@@ -5788,9 +5793,13 @@ static void init_putv(CType *type, Section *sec, unsigned long c, int v, int exp
             else
                 tcc_error("can't cross compile long double constants");
             break;
+#if PTR_SIZE != 8
         case VT_LLONG:
             *(long long *) ptr |= (vtop->c.i & bit_mask) << bit_pos;
             break;
+#else
+        case VT_LLONG:
+#endif
         case VT_PTR: {
             addr_t val = (vtop->c.i & bit_mask) << bit_pos;
 #if defined(TCC_TARGET_ARM64) || defined(TCC_TARGET_X86_64)
