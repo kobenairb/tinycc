@@ -6043,6 +6043,8 @@ static void decl_designator(
             c += index * type_size(type, &align);
         } else {
             f = *cur_field;
+            while (f && (f->v & SYM_FIRST_ANOM))
+                *cur_field = f = f->next;
             if (!f)
                 tcc_error("too many field init");
             /* XXX: fix this mess by using explicit storage field */
