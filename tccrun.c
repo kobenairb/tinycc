@@ -125,6 +125,7 @@ LIBTCCAPI int tcc_run(TCCState *s1, int argc, char **argv)
         for (i = 0; i < argc; ++i)
             bound_new_region(argv[i], strlen(argv[i]));
 
+        errno = 0; /* clean errno value */
         ret = (*prog_main)(argc, argv);
 
         /* unmark argv area */
@@ -135,7 +136,10 @@ LIBTCCAPI int tcc_run(TCCState *s1, int argc, char **argv)
         bound_exit();
     } else
 #endif
+    {
+        errno = 0; /* clean errno value */
         ret = (*prog_main)(argc, argv);
+    }
     return ret;
 }
 
