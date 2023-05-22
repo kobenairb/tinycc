@@ -1041,6 +1041,11 @@ LIBTCCAPI void tcc_delete(TCCState *s1)
     dynarray_reset(&s1->sysinclude_paths, &s1->nb_sysinclude_paths);
 
     tcc_free(s1->tcc_lib_path);
+
+    dynarray_reset(&s1->input_files, &s1->nb_input_files);
+    dynarray_reset(&s1->input_libs, &s1->nb_input_libs);
+    dynarray_reset(&s1->target_deps, &s1->nb_target_deps);
+
 #ifdef HAVE_SELINUX
     munmap(s1->write_mem, s1->mem_size);
     munmap(s1->runtime_mem, s1->mem_size);
@@ -1090,6 +1095,9 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
             error_noabort("file '%s' not found", filename);
         goto the_end;
     }
+
+    /* update target deps */
+    dynarray_add((void ***) &s1->target_deps, &s1->nb_target_deps, tcc_strdup(filename));
 
     if (flags & AFF_PREPROCESS) {
         ret = tcc_preprocess(s1);
@@ -1181,6 +1189,8 @@ the_end:
 
 LIBTCCAPI int tcc_add_file(TCCState *s, const char *filename)
 {
+    dynarray_add((void ***) &s->input_files, &s->nb_input_files, tcc_strdup(filename));
+
     if (s->output_type == TCC_OUTPUT_PREPROCESS)
         return tcc_add_file_internal(s, filename, AFF_PRINT_ERROR | AFF_PREPROCESS);
     else
@@ -1216,6 +1226,8 @@ LIBTCCAPI int tcc_add_library(TCCState *s, const char *libraryname)
 {
     char buf[1024];
     int i;
+
+    dynarray_add((void ***) &s->input_libs, &s->nb_input_libs, tcc_strdup(libraryname));
 
     /* first we look for the dynamic library if not static linking */
     if (!s->static_link) {
@@ -1545,4 +1557,61 @@ PUB_FUNC void set_num_callers(int n)
 #ifdef CONFIG_TCC_BACKTRACE
     num_callers = n;
 #endif
+}
+
+LIBTCCAPI const char *tcc_default_target(TCCState *s)
+{
+    /* FIXME will break in multithreaded case */
+    static char outfile_default[1024];
+
+    char *ext;
+    const char *name = strcmp(s->input_files[0], "-") == 0 ? "a" : tcc_basename(s->input_files[0]);
+    pstrcpy(outfile_default, sizeof(outfile_default), name);
+    ext = tcc_fileextension(outfile_default);
+#ifdef TCC_TARGET_PE
+    if (s->output_type == TCC_OUTPUT_DLL)
+        strcpy(ext, ".dll");
+    else if (s->output_type == TCC_OUTPUT_EXE)
+        strcpy(ext, ".exe");
+    else
+#endif
+        if (s->output_type == TCC_OUTPUT_OBJ && !s->reloc_output && *ext)
+        strcpy(ext, ".o");
+    else
+        pstrcpy(outfile_default, sizeof(outfile_default), "a.out");
+
+    return outfile_default;
+}
+
+LIBTCCAPI void tcc_gen_makedeps(TCCState *s, const char *target, const char *filename)
+{
+    FILE *depout;
+    char buf[1024], *ext;
+    int i;
+
+    if (!target)
+        target = tcc_default_target(s);
+
+    if (!filename) {
+        /* compute filename automatically
+         * dir/file.o -> dir/file.d             */
+        pstrcpy(buf, sizeof(buf), target);
+        ext = tcc_fileextension(buf);
+        pstrcpy(ext, sizeof(buf) - (ext - buf), ".d");
+        filename = buf;
+    }
+
+    if (s->verbose)
+        printf("<- %s\n", filename);
+
+    /* XXX return err codes instead of error() ? */
+    depout = fopen(filename, "w");
+    if (!depout)
+        error("could not open '%s'", filename);
+
+    fprintf(depout, "%s : \\\n", target);
+    for (i = 0; i < s->nb_target_deps; ++i)
+        fprintf(depout, "\t%s \\\n", s->target_deps[i]);
+    fprintf(depout, "\n");
+    fclose(depout);
 }
