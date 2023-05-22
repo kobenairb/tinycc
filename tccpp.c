@@ -2475,10 +2475,13 @@ redo_no_start:
         PEEKC(c, p);
         if (c == '*') {
             p = parse_comment(p);
-            goto redo_no_start;
+            /* comments replaced by a blank */
+            tok = ' ';
+            goto keep_tok_flags;
         } else if (c == '/') {
             p = parse_line_comment(p);
-            goto redo_no_start;
+            tok = ' ';
+            goto keep_tok_flags;
         } else if (c == '=') {
             p++;
             tok = TOK_A_DIV;
@@ -2874,16 +2877,17 @@ static void macro_subst(TokenString *tok_str,
     int t, ret, spc;
     CValue cval;
     struct macro_level ml;
+    int force_blank;
 
     /* first scan for '##' operator handling */
     ptr = macro_str;
     macro_str1 = macro_twosharps(ptr);
 
-    /* a ' ' after subst */
-    int append_space = 0;
     if (macro_str1)
         ptr = macro_str1;
     spc = 0;
+    force_blank = 0;
+
     while (1) {
         /* NOTE: ptr == NULL can only happen if tokens are read from
            file stream due to a macro function call */
@@ -2919,13 +2923,13 @@ static void macro_subst(TokenString *tok_str,
             if (ret != 0)
                 goto no_subst;
             if (parse_flags & PARSE_FLAG_SPACES)
-                append_space = 1;
+                force_blank = 1;
         } else {
         no_subst:
-            if (append_space) {
+            if (force_blank) {
                 tok_str_add(tok_str, ' ');
                 spc = 1;
-                append_space = 0;
+                force_blank = 0;
             }
             if (!check_space(t, &spc))
                 tok_str_add2(tok_str, t, &cval);
