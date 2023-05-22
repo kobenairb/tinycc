@@ -376,7 +376,8 @@ typedef struct SValue
     unsigned short r2; /* second register, used for 'long long'
                               type. If not used, set to VT_CONST */
     CValue c;          /* constant, if VT_CONST */
-    struct Sym *sym;   /* symbol, if (VT_SYM | VT_CONST) */
+    struct Sym *sym;   /* symbol, if (VT_SYM | VT_CONST), or if
+                      result of unary() for an identifier. */
 } SValue;
 
 struct Attribute
@@ -406,7 +407,7 @@ typedef struct Sym
         int scope;     /* scope level for locals */
     };
     union {
-        long r; /* associated register */
+        long r; /* associated register or VT_CONST/VT_LOCAL and LVAL type */
         struct Attribute a;
     };
     union {
@@ -415,7 +416,7 @@ typedef struct Sym
     };
     CType type; /* associated type */
     union {
-        struct Sym *next; /* next related symbol */
+        struct Sym *next; /* next related symbol (for fields and anoms) */
         long jnext;       /* next jump label */
     };
     struct Sym *prev;     /* prev symbol in stack */
@@ -1592,6 +1593,7 @@ ST_FUNC void gen_expr32(ExprValue *pe);
 ST_FUNC void gen_expr64(ExprValue *pe);
 #endif
 ST_FUNC void asm_opcode(TCCState *s1, int opcode);
+ST_FUNC int asm_parse_regvar(int t);
 ST_FUNC void asm_compute_constraints(ASMOperand *operands,
                                      int nb_operands,
                                      int nb_outputs,
