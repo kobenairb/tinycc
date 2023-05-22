@@ -104,9 +104,8 @@ static const char help2[]
       "  signed-char                   default char is signed\n"
       "  common                        use common section instead of bss\n"
       "  leading-underscore            decorate extern symbols\n"
-      "  ms-extensions                 allow struct w/o identifier\n"
+      "  ms-extensions                 allow anonymous struct in struct\n"
       "  dollars-in-identifiers        allow '$' in C symbols\n"
-      "  old-struct-init-code          some hack for parsing initializers\n"
       "-m... target specific options:\n"
       "  ms-bitfields                  use MSVC bitfield layout\n"
 #ifdef TCC_TARGET_ARM
@@ -149,32 +148,18 @@ static const char version[] = "tcc version " TCC_VERSION " ("
                               "C67"
 #elif defined TCC_TARGET_ARM
                               "ARM"
-#ifdef TCC_ARM_HARDFLOAT
-                              " Hard Float"
-#endif
 #elif defined TCC_TARGET_ARM64
                               "AArch64"
+#endif
 #ifdef TCC_ARM_HARDFLOAT
                               " Hard Float"
-#endif
 #endif
 #ifdef TCC_TARGET_PE
                               " Windows"
-#elif defined(__APPLE__)
-                              /* Current Apple OS name as of 2016 */
-                              " macOS"
 #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
                               " FreeBSD"
-#elif defined(__DragonFly__)
-                              " DragonFly BSD"
-#elif defined(__NetBSD__)
-                              " NetBSD"
-#elif defined(__OpenBSD__)
-                              " OpenBSD"
-#elif defined(__linux__)
-                              " Linux"
 #else
-                              " Unidentified system"
+                              " Linux"
 #endif
                               ")\n";
 
@@ -196,6 +181,24 @@ static void print_search_dirs(TCCState *s)
     print_dirs("crt", s->crt_paths, s->nb_crt_paths);
     printf("elfinterp:\n  %s\n", DEFAULT_ELFINTERP(s));
 #endif
+}
+
+static void set_environment(TCCState *s)
+{
+    char *path;
+
+    path = getenv("C_INCLUDE_PATH");
+    if (path != NULL) {
+        tcc_add_include_path(s, path);
+    }
+    path = getenv("CPATH");
+    if (path != NULL) {
+        tcc_add_include_path(s, path);
+    }
+    path = getenv("LIBRARY_PATH");
+    if (path != NULL) {
+        tcc_add_library_path(s, path);
+    }
 }
 
 static char *default_outputfile(TCCState *s, const char *first_file)
@@ -261,9 +264,6 @@ redo:
 #endif
         if (opt == OPT_V)
             return 0;
-
-        tcc_set_environment(s);
-
         if (opt == OPT_PRINT_DIRS) {
             /* initialize search dirs */
             tcc_set_output_type(s, TCC_OUTPUT_MEMORY);
@@ -283,8 +283,8 @@ redo:
                 if (!s->ppfp)
                     tcc_error("could not write '%s'", s->outfile);
             }
-        } else if (s->output_type == TCC_OUTPUT_OBJ) {
-            if (s->nb_libraries != 0 && !s->option_r)
+        } else if (s->output_type == TCC_OUTPUT_OBJ && !s->option_r) {
+            if (s->nb_libraries)
                 tcc_error("cannot specify libraries with -c");
             if (n > 1 && s->outfile)
                 tcc_error("cannot specify output file with -c many files");
@@ -297,6 +297,7 @@ redo:
             start_time = getclock_ms();
     }
 
+    set_environment(s);
     if (s->output_type == 0)
         s->output_type = TCC_OUTPUT_EXE;
     tcc_set_output_type(s, s->output_type);
@@ -319,7 +320,7 @@ redo:
         }
         s->filetype = 0;
         s->alacarte_link = 1;
-        if (ret || --n == 0 || s->output_type == TCC_OUTPUT_OBJ)
+        if (ret || --n == 0 || (s->output_type == TCC_OUTPUT_OBJ && !s->option_r))
             break;
     }
 
