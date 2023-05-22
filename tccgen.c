@@ -3866,6 +3866,18 @@ do_decl:
     }
 }
 
+static void sym_to_attr(AttributeDef *ad, Sym *s)
+{
+    if (s->a.aligned && 0 == ad->a.aligned)
+        ad->a.aligned = s->a.aligned;
+    if (s->f.func_call && 0 == ad->f.func_call)
+        ad->f.func_call = s->f.func_call;
+    if (s->f.func_type && 0 == ad->f.func_type)
+        ad->f.func_type = s->f.func_type;
+    if (s->a.packed)
+        ad->a.packed = 1;
+}
+
 /* Add type qualifiers to a type. If the type is an array then the qualifiers
    are added to the element type, copied because it could be a typedef. */
 static void parse_btype_qualify(CType *type, int qualifiers)
@@ -4062,6 +4074,8 @@ static int parse_btype(CType *type, AttributeDef *ad)
             parse_expr_type(&type1);
             /* remove all storage modifiers except typedef */
             type1.t &= ~(VT_STORAGE & ~VT_TYPEDEF);
+            if (type1.ref)
+                sym_to_attr(ad, type1.ref);
             goto basic_type2;
         default:
             if (typespec_found)
@@ -4077,12 +4091,7 @@ static int parse_btype(CType *type, AttributeDef *ad)
                 parse_btype_qualify(type, t);
             t = type->t;
             /* get attributes from typedef */
-            if (s->a.aligned && 0 == ad->a.aligned)
-                ad->a.aligned = s->a.aligned;
-            if (s->f.func_call && 0 == ad->f.func_call)
-                ad->f.func_call = s->f.func_call;
-            if (s->a.packed)
-                ad->a.packed = 1;
+            sym_to_attr(ad, s);
             next();
             typespec_found = 1;
             st = bt = -2;
@@ -6956,7 +6965,7 @@ static void gen_inline_functions(TCCState *s)
 
     ln = file->line_num;
     /* iterate while inline function are referenced */
-    for (;;) {
+    do {
         inline_generated = 0;
         for (i = 0; i < s->nb_inline_fns; ++i) {
             fn = s->inline_fns[i];
@@ -6978,9 +6987,7 @@ static void gen_inline_functions(TCCState *s)
                 inline_generated = 1;
             }
         }
-        if (!inline_generated)
-            break;
-    }
+    } while (inline_generated);
     file->line_num = ln;
 }
 
@@ -7199,12 +7206,13 @@ static int decl0(int l, int is_for_loop_init, Sym *func_sym)
                         sym = sym_push(v, &type, 0, 0);
                     }
                     sym->a = ad.a;
+                    sym->f = ad.f;
                 } else {
                     r = 0;
                     if ((type.t & VT_BTYPE) == VT_FUNC) {
                         /* external function definition */
                         /* specific case for func_call attribute */
-                        type.ref->a = ad.a;
+                        type.ref->f = ad.f;
                     } else if (!(type.t & VT_ARRAY)) {
                         /* not lvalue if array */
                         r |= lvalue_type(type.t);
