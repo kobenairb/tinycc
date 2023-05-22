@@ -497,22 +497,21 @@ unsigned long long __fixunssfdi(float a1)
     register union float_long fl1;
     register int exp;
     register unsigned long l;
-    int s;
+
     fl1.f = a1;
 
     if (fl1.l == 0)
-        return 0;
+        return (0);
 
     exp = EXP(fl1.l) - EXCESS - 24;
 
     l = MANT(fl1.l);
-    s = SIGN(fl1.l) ? -1 : 1;
-    if (exp >= 64)
+    if (exp >= 41)
         return (unsigned long long) -1;
     else if (exp >= 0)
-        return ((unsigned long long) l << exp) * s;
+        return (unsigned long long) l << exp;
     else if (exp >= -23)
-        return (l >> -exp) * s;
+        return l >> -exp;
     else
         return 0;
 }
@@ -522,7 +521,7 @@ unsigned long long __fixunsdfdi(double a1)
     register union double_long dl1;
     register int exp;
     register unsigned long long l;
-    int s;
+
     dl1.d = a1;
 
     if (dl1.ll == 0)
@@ -531,13 +530,13 @@ unsigned long long __fixunsdfdi(double a1)
     exp = EXPD(dl1) - EXCESSD - 53;
 
     l = MANTD_LL(dl1);
-    s = SIGND(dl1) ? -1 : 1;
-    if (exp >= 64)
+
+    if (exp >= 12)
         return (unsigned long long) -1;
     else if (exp >= 0)
-        return (l << exp) * s;
+        return l << exp;
     else if (exp >= -52)
-        return (l >> -exp) * s;
+        return l >> -exp;
     else
         return 0;
 }
@@ -547,22 +546,20 @@ unsigned long long __fixunsxfdi(long double a1)
     register union ldouble_long dl1;
     register int exp;
     register unsigned long long l;
-    int s;
+
     dl1.ld = a1;
 
     if (dl1.l.lower == 0 && dl1.l.upper == 0)
         return (0);
 
     exp = EXPLD(dl1) - EXCESSLD - 64;
-    s = SIGNLD(dl1) ? -1 : 1;
+
     l = dl1.l.lower;
 
-    if (exp >= 64)
+    if (exp > 0)
         return (unsigned long long) -1;
-    else if (exp >= 0)
-        return ((unsigned long long) l << exp) * s;
-    else if (exp >= -64)
-        return (l >> -exp) * s;
+    else if (exp >= -63)
+        return l >> -exp;
     else
         return 0;
 }
@@ -606,7 +603,7 @@ extern void free(void *);
 extern void abort(void);
 #endif
 
-enum __va_arg_type { __va_gen_reg, __va_float_reg, __va_ld_reg, __va_stack };
+enum __va_arg_type { __va_gen_reg, __va_float_reg, __va_stack };
 
 //This should be in sync with the declaration on our include/stdarg.h
 /* GCC compatible definition of va_list. */
@@ -655,12 +652,11 @@ void *__va_arg(__va_list_struct *ap, enum __va_arg_type arg_type, int size, int 
         size = 8;
         goto use_overflow_area;
 
-    case __va_ld_reg:
-        ap->overflow_arg_area = (char *) ((intptr_t) (ap->overflow_arg_area + align - 1)
-                                          & -(intptr_t) align);
     case __va_stack:
     use_overflow_area:
         ap->overflow_arg_area += size;
+        ap->overflow_arg_area = (char *) ((intptr_t) (ap->overflow_arg_area + align - 1)
+                                          & -(intptr_t) align);
         return ap->overflow_arg_area - size;
 
     default:
