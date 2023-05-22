@@ -1034,6 +1034,8 @@ ST_FUNC void build_got_entries(TCCState *s1)
             type = ELFW(R_TYPE)(rel->r_info);
             switch (type) {
 #if defined(TCC_TARGET_I386)
+            case R_386_PC16:
+            case R_386_PC32:
             case R_386_GOT32:
             case R_386_GOT32X:
             case R_386_GOTOFF:
@@ -1045,7 +1047,8 @@ ST_FUNC void build_got_entries(TCCState *s1)
                     sym_index = ELFW(R_SYM)(rel->r_info);
                     sym = &((ElfW(Sym) *) symtab_section->data)[sym_index];
                     /* look at the symbol got offset. If none, then add one */
-                    if (type == R_386_GOT32 || type == R_386_GOT32X)
+                    if (type == R_386_GOT32 || type == R_386_GOT32X || type == R_386_16
+                        || type == R_386_32)
                         reloc_type = R_386_GLOB_DAT;
                     else
                         reloc_type = R_386_JMP_SLOT;
@@ -1056,10 +1059,19 @@ ST_FUNC void build_got_entries(TCCState *s1)
             case R_ARM_PC24:
             case R_ARM_CALL:
             case R_ARM_JUMP24:
-            case R_ARM_GOT32:
-            case R_ARM_GOTOFF:
-            case R_ARM_GOTPC:
             case R_ARM_PLT32:
+            case R_ARM_THM_PC22:
+            case R_ARM_MOVT_ABS:
+            case R_ARM_MOVW_ABS_NC:
+            case R_ARM_THM_MOVT_ABS:
+            case R_ARM_THM_MOVW_ABS_NC:
+            case R_ARM_PREL31:
+            case R_ARM_REL32:
+            case R_ARM_GOTPC:
+            case R_ARM_GOTOFF:
+            case R_ARM_GOT32:
+            case R_ARM_V4BX:
+
                 if (!s1->got)
                     build_got(s1);
                 sym_index = ELFW(R_SYM)(rel->r_info);
@@ -1068,7 +1080,9 @@ ST_FUNC void build_got_entries(TCCState *s1)
                     && (sym->st_shndx == SHN_UNDEF || s1->output_type == TCC_OUTPUT_MEMORY)) {
                     unsigned long ofs;
                     /* look at the symbol got offset. If none, then add one */
-                    if (type == R_ARM_GOT32)
+                    if (type == R_ARM_GOT32 || type == R_ARM_MOVT_ABS || type == R_ARM_MOVW_ABS_NC
+                        || type == R_ARM_THM_MOVT_ABS || type == R_ARM_THM_MOVW_ABS_NC
+                        || type == R_ARM_ABS32 || type == R_ARM_REL32)
                         reloc_type = R_ARM_GLOB_DAT;
                     else
                         reloc_type = R_ARM_JUMP_SLOT;
@@ -1080,7 +1094,8 @@ ST_FUNC void build_got_entries(TCCState *s1)
                            sym->st_shndx,
                            ofs);
 #endif
-                    if (type != R_ARM_GOT32) {
+                    if (type == R_ARM_PC24 || type == R_ARM_CALL || type == R_ARM_JUMP24
+                        || type == R_ARM_PLT32) {
                         addr_t *ptr = (addr_t *) (s1->sections[s->sh_info]->data + rel->r_offset);
                         /* x must be signed!  */
                         int x = *ptr & 0xffffff;
@@ -1174,6 +1189,10 @@ ST_FUNC void build_got_entries(TCCState *s1)
                 }
                 break;
 #elif defined(TCC_TARGET_X86_64)
+            case R_X86_64_32:
+            case R_X86_64_32S:
+            case R_X86_64_64:
+            case R_X86_64_PC32:
             case R_X86_64_GOT32:
             case R_X86_64_GOTTPOFF:
             case R_X86_64_GOTPCREL:
@@ -1196,14 +1215,16 @@ ST_FUNC void build_got_entries(TCCState *s1)
                     || type == R_X86_64_PLT32) {
                     unsigned long ofs;
                     /* look at the symbol got offset. If none, then add one */
-                    if (type == R_X86_64_PLT32)
-                        reloc_type = R_X86_64_JUMP_SLOT;
-                    else
+                    if (type == R_X86_64_GOT32 || type == R_X86_64_GOTPCREL
+                        || type == R_X86_64_GOTPCRELX || type == R_X86_64_REX_GOTPCRELX
+                        || type == R_X86_64_32 || type == R_X86_64_32S || type == R_X86_64_64)
                         reloc_type = R_X86_64_GLOB_DAT;
+                    else
+                        reloc_type = R_X86_64_JUMP_SLOT;
                     ofs = put_got_entry(s1, reloc_type, sym->st_size, sym->st_info, sym_index);
                     if (type == R_X86_64_PLT32)
                         /* We store the place of the generated PLT slot
-               in our addend.  */
+                           in our addend.  */
                         rel->r_addend += ofs;
                 }
                 break;
