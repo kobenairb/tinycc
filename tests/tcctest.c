@@ -1095,6 +1095,20 @@ struct Large
     };
 } __attribute__((aligned(2 * sizeof(long))));
 
+typedef unsigned long long __attribute__((aligned(4))) unaligned_u64;
+
+struct aligntest9
+{
+    unsigned int buf_nr;
+    unaligned_u64 start_lba;
+};
+
+struct aligntest10
+{
+    unsigned int buf_nr;
+    unsigned long long start_lba;
+};
+
 void struct_test()
 {
     struct1 *s;
@@ -1150,6 +1164,12 @@ void struct_test()
     printf("aligntest8 sizeof=%d alignof=%d\n",
            sizeof(struct aligntest8),
            __alignof__(struct aligntest8));
+    printf("aligntest9 sizeof=%d alignof=%d\n",
+           sizeof(struct aligntest9),
+           __alignof__(struct aligntest9));
+    printf("aligntest10 sizeof=%d alignof=%d\n",
+           sizeof(struct aligntest10),
+           __alignof__(struct aligntest10));
     printf("altest5 sizeof=%d alignof=%d\n", sizeof(altest5), __alignof__(altest5));
     printf("altest6 sizeof=%d alignof=%d\n", sizeof(altest6), __alignof__(altest6));
     /*printf("altest7 sizeof=%d alignof=%d\n",
