@@ -331,6 +331,7 @@ static void vsetc(CType *type, int r, CValue *vc)
 void vpush(CType *type)
 {
     CValue cval;
+    memset(&cval, 0, sizeof(CValue));
     vsetc(type, VT_CONST, &cval);
 }
 
@@ -338,6 +339,7 @@ void vpush(CType *type)
 ST_FUNC void vpushi(int v)
 {
     CValue cval;
+    memset(&cval, 0, sizeof(CValue));
     cval.i = v;
     vsetc(&int_type, VT_CONST, &cval);
 }
@@ -346,6 +348,7 @@ ST_FUNC void vpushi(int v)
 static void vpushs(long long v)
 {
     CValue cval;
+    memset(&cval, 0, sizeof(CValue));
     if (PTR_SIZE == 4)
         cval.i = (int) v;
     else
@@ -356,8 +359,9 @@ static void vpushs(long long v)
 /* push arbitrary 64bit constant */
 void vpush64(int ty, unsigned long long v)
 {
-    CValue cval;
     CType ctype;
+    CValue cval;
+    memset(&cval, 0, sizeof(CValue));
     ctype.t = ty;
     ctype.ref = NULL;
     cval.ull = v;
@@ -374,6 +378,7 @@ static inline void vpushll(long long v)
 static inline void vpushsym(CType *type, Sym *sym)
 {
     CValue cval;
+    memset(&cval, 0, sizeof(CValue));
 
     cval.ull = 0;
     vsetc(type, VT_CONST | VT_SYM, &cval);
@@ -447,6 +452,7 @@ ST_FUNC void vpush_global_sym(CType *type, int v)
 ST_FUNC void vset(CType *type, int r, int v)
 {
     CValue cval;
+    memset(&cval, 0, sizeof(CValue));
 
     cval.i = v;
     vsetc(type, r, &cval);
@@ -725,6 +731,7 @@ ST_FUNC int gv(int rc)
             unsigned long offset;
 #if defined(TCC_TARGET_ARM) && !defined(TCC_ARM_VFP)
             CValue check;
+            memset(&check, 0, sizeof(CValue));
 #endif
 
             /* XXX: unify with initializers handling ? */
