@@ -2473,6 +2473,8 @@ static void gen_assign_cast(CType *dt)
         if (sbt == VT_PTR || sbt == VT_FUNC) {
             tcc_warning("assignment makes integer from pointer without a cast");
         }
+        if (sbt == VT_STRUCT)
+            goto error;
         /* XXX: more tests */
         break;
     case VT_STRUCT:
