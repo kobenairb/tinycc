@@ -4910,12 +4910,13 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
                     size = type_size(&func_vt, &align);
                     if ((vtop->r != (VT_LOCAL | VT_LVAL) || (vtop->c.i & (ret_align - 1)))
                         && (align & (ret_align - 1))) {
-                        loc = (loc - size) & -align;
+                        loc = (loc - size) & -ret_align;
                         addr = loc;
                         type = func_vt;
                         vset(&type, VT_LOCAL | VT_LVAL, addr);
                         vswap();
                         vstore();
+                        vpop();
                         vset(&ret_type, VT_LOCAL | VT_LVAL, addr);
                     }
                     vtop->type = ret_type;
