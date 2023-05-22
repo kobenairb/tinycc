@@ -122,6 +122,7 @@ addl $0x123, 0x100
 addl $0x123, 0x100(%ebx)
 addl $0x123, 0x100(%ebx,%edx,2)
 addl $0x123, 0x100(%esp)
+addl $0x123, (3*8)(%esp)
 addl $0x123, (%ebp)
 addl $0x123, (%esp)
 cmpl $0x123, (%esp)
@@ -248,7 +249,11 @@ L3:
 
  fadd
  fadd %st(1), %st
+ fadd %st(0), %st(1)
  fadd %st(3)
+
+ fmul %st(0),%st(0)
+ fmul %st(0),%st(1)
 
  faddp %st(5)
  faddp
@@ -478,6 +483,24 @@ int $0x10
     repz
     repne
     repnz
+    nop
+
+    lock ;negl (%eax)
+    wait ;pushf
+    rep  ;stosb
+    repe ;lodsb
+    repz ;cmpsb
+    repne;movsb
+    repnz;outsb
+
+    /* handle one-line prefix + ops */
+    lock  negl (%eax)
+    wait  pushf
+    rep   stosb
+    repe  lodsb
+    repz  cmpsb
+    repne movsb
+    repnz outsb
     
     invd
     wbinvd

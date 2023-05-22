@@ -112,6 +112,7 @@ enum {
     TCC_OPTION_O,
     TCC_OPTION_m,
     TCC_OPTION_f,
+    TCC_OPTION_isystem,
     TCC_OPTION_nostdinc,
     TCC_OPTION_nostdlib,
     TCC_OPTION_print_search_dirs,
@@ -162,6 +163,7 @@ static const TCCOption tcc_options[] = {
     {"O", TCC_OPTION_O, TCC_OPTION_HAS_ARG | TCC_OPTION_NOSEP},
     {"m", TCC_OPTION_m, TCC_OPTION_HAS_ARG},
     {"f", TCC_OPTION_f, TCC_OPTION_HAS_ARG | TCC_OPTION_NOSEP},
+    {"isystem", TCC_OPTION_isystem, TCC_OPTION_HAS_ARG},
     {"nostdinc", TCC_OPTION_nostdinc, 0},
     {"nostdlib", TCC_OPTION_nostdlib, 0},
     {"print-search-dirs", TCC_OPTION_print_search_dirs, 0},
@@ -422,6 +424,9 @@ static int parse_args(TCCState *s, int argc, char **argv)
                 /* generate a .o merging several output files */
                 reloc_output = 1;
                 output_type = TCC_OUTPUT_OBJ;
+                break;
+            case TCC_OPTION_isystem:
+                tcc_add_sysinclude_path(s, optarg);
                 break;
             case TCC_OPTION_nostdinc:
                 s->nostdinc = 1;
