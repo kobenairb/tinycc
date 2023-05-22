@@ -4328,14 +4328,11 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         gsym_addr(b, d);
     } else if (tok == '{') {
         Sym *llabel;
-        SValue *pvtop;
 
         next();
         /* record local declaration stack position */
         s = local_stack;
         llabel = local_label_stack;
-        /* record vstack position */
-        pvtop = vtop;
         /* handle local labels declarations */
         if (tok == TOK_LABEL) {
             next();
@@ -4362,8 +4359,6 @@ static void block(int *bsym, int *csym, int *case_sym, int *def_sym, int case_re
         }
         /* pop locally defined labels */
         label_pop(&local_label_stack, llabel);
-        /* pop left-over VLA size expressions */
-        vtop = pvtop;
         if (is_expr) {
             /* XXX: this solution makes only valgrind happy...
                triggered by gcc.c-torture/execute/20000917-1.c */
