@@ -149,7 +149,7 @@ typedef int BOOL;
 
 /* path to find crt1.o, crti.o and crtn.o */
 #ifndef CONFIG_TCC_CRT_PREFIX
-#define CONFIG_TCC_CRT_PREFIX CONFIG_SYSROOT "/usr" CONFIG_TCC_LDDIR
+#define CONFIG_TCC_CRT_PREFIX "/usr" CONFIG_TCC_LDDIR
 #endif
 
 #ifndef CONFIG_TCC_SYSINCLUDE_PATHS
@@ -164,9 +164,9 @@ typedef int BOOL;
 #ifdef TCC_TARGET_PE
 #define CONFIG_TCC_LIBPATH "\b/lib"
 #else
-#define CONFIG_TCC_LIBPATH \
-    CONFIG_TCC_CRT_PREFIX  \
-    ":" CONFIG_SYSROOT CONFIG_TCC_LDDIR ":" CONFIG_SYSROOT "/usr/local" CONFIG_TCC_LDDIR
+#define CONFIG_TCC_LIBPATH                                                                      \
+    CONFIG_SYSROOT CONFIG_TCC_CRT_PREFIX ":" CONFIG_SYSROOT CONFIG_TCC_LDDIR ":" CONFIG_SYSROOT \
+                                         "/usr/local" CONFIG_TCC_LDDIR
 #endif
 #endif
 
