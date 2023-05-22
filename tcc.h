@@ -406,7 +406,8 @@ typedef struct ASMOperand
 
 struct TCCState
 {
-    int output_type;
+    unsigned output_type : 8;
+    unsigned reloc_output : 1;
 
     BufferedFile **include_stack_ptr;
     int *ifdef_stack_ptr;
@@ -526,6 +527,12 @@ struct TCCState
 
     /* output file for preprocessing */
     FILE *outfile;
+
+    /* input files and libraries for this compilation */
+    char **input_files;
+    int nb_input_files;
+    char **input_libs;
+    int nb_input_libs;
 
     /* for tcc_relocate */
     int runtime_added;
