@@ -18,7 +18,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-static int asm_get_local_label_name(TCCState *s1, unsigned int n)
+#include "tcc.h"
+
+ST_FUNC int asm_get_local_label_name(TCCState *s1, unsigned int n)
 {
     char buf[64];
     TokenSym *ts;
@@ -28,7 +30,7 @@ static int asm_get_local_label_name(TCCState *s1, unsigned int n)
     return ts->tok;
 }
 
-static void asm_expr(TCCState *s1, ExprValue *pe);
+ST_FUNC void asm_expr(TCCState *s1, ExprValue *pe);
 
 /* We do not use the C expression parser to handle symbols. Maybe the
    C expression parser could be tweaked to do so. */
@@ -237,12 +239,12 @@ static inline void asm_expr_sum(TCCState *s1, ExprValue *pe)
     }
 }
 
-static void asm_expr(TCCState *s1, ExprValue *pe)
+ST_FUNC void asm_expr(TCCState *s1, ExprValue *pe)
 {
     asm_expr_sum(s1, pe);
 }
 
-static int asm_int_expr(TCCState *s1)
+ST_FUNC int asm_int_expr(TCCState *s1)
 {
     ExprValue e;
     asm_expr(s1, &e);
@@ -677,7 +679,7 @@ static int tcc_assemble_internal(TCCState *s1, int do_preprocess)
 }
 
 /* Assemble the current file */
-static int tcc_assemble(TCCState *s1, int do_preprocess)
+ST_FUNC int tcc_assemble(TCCState *s1, int do_preprocess)
 {
     Sym *define_start;
     int ret;
@@ -741,7 +743,7 @@ static void tcc_assemble_inline(TCCState *s1, char *str, int len)
 /* find a constraint by its number or id (gcc 3 extended
    syntax). return -1 if not found. Return in *pp in char after the
    constraint */
-static int find_constraint(ASMOperand *operands, int nb_operands, const char *name, const char **pp)
+ST_FUNC int find_constraint(ASMOperand *operands, int nb_operands, const char *name, const char **pp)
 {
     int index;
     TokenSym *ts;
@@ -886,7 +888,7 @@ static void parse_asm_str(CString *astr)
 }
 
 /* parse the GCC asm() instruction */
-static void asm_instr(void)
+ST_FUNC void asm_instr(void)
 {
     CString astr, astr1;
     ASMOperand operands[MAX_ASM_OPERANDS];
@@ -984,7 +986,7 @@ static void asm_instr(void)
     cstr_free(&astr1);
 }
 
-static void asm_global_instr(void)
+ST_FUNC void asm_global_instr(void)
 {
     CString astr;
 
