@@ -1191,7 +1191,7 @@ static void tok_print(int *str)
 ST_FUNC void parse_define(void)
 {
     Sym *s, *first, **ps;
-    int v, t, varg, is_vaargs, spc;
+    int v, t, varg, is_vaargs, spc, ptok, macro_list_start;
     TokenString str;
 
     v = tok;
@@ -1232,7 +1232,12 @@ ST_FUNC void parse_define(void)
     tok_str_new(&str);
     spc = 2;
     /* EOF testing necessary for '-D' handling */
+    ptok = 0;
+    macro_list_start = 1;
     while (tok != TOK_LINEFEED && tok != TOK_EOF) {
+        if (!macro_list_start && spc == 2 && tok == TOK_TWOSHARPS)
+            tcc_error("'##' invalid at start of macro");
+        ptok = tok;
         /* remove spaces around ## and after '#' */
         if (TOK_TWOSHARPS == tok) {
             if (1 == spc)
@@ -1246,7 +1251,10 @@ ST_FUNC void parse_define(void)
         tok_str_add2(&str, tok, &tokc);
     skip:
         next_nomacro_spc();
+        macro_list_start = 0;
     }
+    if (ptok == TOK_TWOSHARPS)
+        tcc_error("'##' invalid at end of macro");
     if (spc == 1)
         --str.len; /* remove trailing space */
     tok_str_add(&str, 0);
