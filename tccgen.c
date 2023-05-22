@@ -312,6 +312,16 @@ static void vpushll(long long v)
     vsetc(&ctype, VT_CONST, &cval);
 }
 
+/* push arbitrary 64bit constant */
+void vpush64(int ty, unsigned long long v)
+{
+    CValue cval;
+    CType ctype;
+    ctype.t = ty;
+    cval.ull = v;
+    vsetc(&ctype, VT_CONST, &cval);
+}
+
 /* Return a static symbol pointing to a section */
 ST_FUNC Sym *get_sym_ref(CType *type, Section *sec, unsigned long offset, unsigned long size)
 {
@@ -3548,6 +3558,21 @@ tok_next:
         vtop->sym = s;
         next();
         break;
+
+    // special qnan , snan and infinity values
+    case TOK___NAN__:
+        vpush64(VT_DOUBLE, 0x7ff8000000000000);
+        next();
+        break;
+    case TOK___SNAN__:
+        vpush64(VT_DOUBLE, 0x7ff0000000000001);
+        next();
+        break;
+    case TOK___INF__:
+        vpush64(VT_DOUBLE, 0x7ff0000000000000);
+        next();
+        break;
+
     default:
     tok_identifier:
         t = tok;
