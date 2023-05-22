@@ -1088,13 +1088,8 @@ ST_FUNC Section *new_symtab(TCCState *s1,
                             int hash_sh_flags);
 
 ST_FUNC int put_elf_str(Section *s, const char *sym);
-ST_FUNC int put_elf_sym(Section *s,
-                        unsigned long value,
-                        unsigned long size,
-                        int info,
-                        int other,
-                        int shndx,
-                        const char *name);
+ST_FUNC int put_elf_sym(
+    Section *s, uplong value, unsigned long size, int info, int other, int shndx, const char *name);
 ST_FUNC int add_elf_sym(
     Section *s, uplong value, unsigned long size, int info, int other, int sh_num, const char *name);
 ST_FUNC int find_elf_sym(Section *s, const char *name);
