@@ -1519,9 +1519,10 @@ static int elf_output_file(TCCState *s1, const char *filename)
             build_got(s1);
 
             /* scan for undefined symbols and see if they are in the
-               dynamic symbols. If a symbol STT_FUNC is found, then we
-               add it in the PLT. If a symbol STT_OBJECT is found, we
-               add it in the .bss section with a suitable relocation */
+               dynamic symbols. If a symbol STT_FUNC or STT_GNU_IFUNC
+               is found, then we add it in the PLT. If a symbol
+               STT_OBJECT is found, we add it in the .bss section with
+               a suitable relocation */
             sym_end = (ElfW(Sym) *) (symtab_section->data + symtab_section->data_offset);
             if (file_type == TCC_OUTPUT_EXE) {
                 for (sym = (ElfW(Sym) *) symtab_section->data + 1; sym < sym_end; sym++) {
@@ -1531,7 +1532,7 @@ static int elf_output_file(TCCState *s1, const char *filename)
                         if (sym_index) {
                             esym = &((ElfW(Sym) *) s1->dynsymtab_section->data)[sym_index];
                             type = ELFW(ST_TYPE)(esym->st_info);
-                            if (type == STT_FUNC) {
+                            if ((type == STT_FUNC) || (type == STT_GNU_IFUNC)) {
                                 put_got_entry(s1,
                                               R_JMP_SLOT,
                                               esym->st_size,
@@ -1637,7 +1638,9 @@ static int elf_output_file(TCCState *s1, const char *filename)
                 for (sym = (ElfW(Sym) *) symtab_section->data + 1; sym < sym_end; sym++) {
                     if (ELFW(ST_BIND)(sym->st_info) != STB_LOCAL) {
 #if defined(TCC_OUTPUT_DLL_WITH_PLT)
-                        if (ELFW(ST_TYPE)(sym->st_info) == STT_FUNC && sym->st_shndx == SHN_UNDEF) {
+                        if ((ELFW(ST_TYPE)(sym->st_info) == STT_FUNC
+                             || ELFW(ST_TYPE)(sym->st_info) == STT_GNU_IFUNC)
+                            && sym->st_shndx == SHN_UNDEF) {
                             put_got_entry(s1,
                                           R_JMP_SLOT,
                                           sym->st_size,

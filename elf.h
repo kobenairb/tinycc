@@ -429,16 +429,17 @@ typedef struct
 
 /* Legal values for ST_TYPE subfield of st_info (symbol type).  */
 
-#define STT_NOTYPE 0  /* Symbol type is unspecified */
-#define STT_OBJECT 1  /* Symbol is a data object */
-#define STT_FUNC 2    /* Symbol is a code object */
-#define STT_SECTION 3 /* Symbol associated with a section */
-#define STT_FILE 4    /* Symbol's name is file name */
-#define STT_NUM 5     /* Number of defined types.  */
-#define STT_LOOS 11   /* Start of OS-specific */
-#define STT_HIOS 12   /* End of OS-specific */
-#define STT_LOPROC 13 /* Start of processor-specific */
-#define STT_HIPROC 15 /* End of processor-specific */
+#define STT_NOTYPE 0     /* Symbol type is unspecified */
+#define STT_OBJECT 1     /* Symbol is a data object */
+#define STT_FUNC 2       /* Symbol is a code object */
+#define STT_SECTION 3    /* Symbol associated with a section */
+#define STT_FILE 4       /* Symbol's name is file name */
+#define STT_NUM 5        /* Number of defined types.  */
+#define STT_GNU_IFUNC 10 /* Symbol is a indirect code object */
+#define STT_LOOS 11      /* Start of OS-specific */
+#define STT_HIOS 12      /* End of OS-specific */
+#define STT_LOPROC 13    /* Start of processor-specific */
+#define STT_HIPROC 15    /* End of processor-specific */
 
 /* Symbol table indices are found in the hash buckets and chain table
    of a symbol hash table section.  This special index value indicates
