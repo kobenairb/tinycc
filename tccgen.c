@@ -2773,7 +2773,7 @@ static void parse_attribute(AttributeDef *ad)
 }
 
 /* enum/struct/union declaration. u is either VT_ENUM or VT_STRUCT */
-static void struct_decl(CType *type, int u)
+static void struct_decl(CType *type, int u, int tdef)
 {
     int a, v, size, align, maxalign, c, offset;
     int bit_size, bit_pos, bsize, bt, lbit_pos, prevbt;
@@ -2794,7 +2794,8 @@ static void struct_decl(CType *type, int u)
             if (s->type.t != a)
                 tcc_error("invalid type");
             goto do_decl;
-        }
+        } else if (tok >= TOK_IDENT && !tdef)
+            tcc_error("unknown struct/union/enum");
     } else {
         v = anon_sym++;
     }
@@ -3039,14 +3040,14 @@ static int parse_btype(CType *type, AttributeDef *ad)
             }
             break;
         case TOK_ENUM:
-            struct_decl(&type1, VT_ENUM);
+            struct_decl(&type1, VT_ENUM, t & VT_TYPEDEF);
         basic_type2:
             u = type1.t;
             type->ref = type1.ref;
             goto basic_type1;
         case TOK_STRUCT:
         case TOK_UNION:
-            struct_decl(&type1, VT_STRUCT);
+            struct_decl(&type1, VT_STRUCT, t & VT_TYPEDEF);
             goto basic_type2;
 
             /* type modifiers */
