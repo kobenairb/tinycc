@@ -1305,6 +1305,8 @@ ST_FUNC void parse_define(void)
     parse_flags |= PARSE_FLAG_SPACES;
     next_nomacro_spc();
     if (tok == '(') {
+        /* must be able to parse TOK_DOTS (in asm mode '.' can be part of identifier) */
+        parse_flags &= ~PARSE_FLAG_ASM_FILE;
         next_nomacro();
         ps = &first;
         if (tok != ')')
@@ -1333,6 +1335,7 @@ ST_FUNC void parse_define(void)
             }
         next_nomacro_spc();
         t = MACRO_FUNC;
+        parse_flags |= (saved_parse_flags & PARSE_FLAG_ASM_FILE);
     }
     tok_str_new(&str);
     spc = 2;
@@ -2471,7 +2474,9 @@ redo_no_start:
         p1 = p;
         h = TOK_HASH_INIT;
         h = TOK_HASH_FUNC(h, c);
-        while (c = *++p, isidnum_table[c - CH_EOF] & (IS_ID | IS_NUM))
+        while (c = *++p,
+               (isidnum_table[c - CH_EOF] & (IS_ID | IS_NUM))
+                   || (c == '.' && (parse_flags & PARSE_FLAG_ASM_FILE)))
             h = TOK_HASH_FUNC(h, c);
         if (c != '\\') {
             TokenSym **pts;
@@ -2503,7 +2508,8 @@ redo_no_start:
             p--;
             PEEKC(c, p);
         parse_ident_slow:
-            while (isidnum_table[c - CH_EOF] & (IS_ID | IS_NUM)) {
+            while ((isidnum_table[c - CH_EOF] & (IS_ID | IS_NUM))
+                   || (c == '.' && (parse_flags & PARSE_FLAG_ASM_FILE))) {
                 cstr_ccat(&tokcstr, c);
                 PEEKC(c, p);
             }
@@ -2566,7 +2572,7 @@ redo_no_start:
             cstr_reset(&tokcstr);
             cstr_ccat(&tokcstr, '.');
             goto parse_num;
-        } else if ((isidnum_table['.' - CH_EOF] & IS_ID) != 0) { /* asm mode */
+        } else if (parse_flags & PARSE_FLAG_ASM_FILE) {
             *--p = c = '.';
             goto parse_ident_fast;
         } else if (c == '.') {
